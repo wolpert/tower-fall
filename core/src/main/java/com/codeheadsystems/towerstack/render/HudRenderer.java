@@ -40,12 +40,19 @@ public class HudRenderer implements Disposable {
         viewport.update(width, height, true);
     }
 
-    /** Live score, parked near the top of the screen. */
-    public void renderPlaying(int score) {
+    /**
+     * Live score, parked near the top of the screen, plus a combo indicator that only
+     * appears once a perfect streak is going (build brief §5, §8).
+     */
+    public void renderPlaying(int score, int combo) {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         font.setColor(Color.WHITE);
         drawCentered(Integer.toString(score), Tunables.WORLD_HEIGHT * 0.90f);
+        if (combo >= 2) {
+            font.setColor(Color.GOLD);
+            drawCentered("COMBO x" + combo, Tunables.WORLD_HEIGHT * 0.84f);
+        }
         batch.end();
     }
 

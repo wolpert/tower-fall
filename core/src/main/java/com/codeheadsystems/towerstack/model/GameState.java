@@ -19,6 +19,7 @@ public class GameState {
     private Phase phase;
     private int blocksPlaced;
     private int score;
+    private int combo;
     private float currentWidth;
 
     public GameState() {
@@ -30,23 +31,37 @@ public class GameState {
         phase = Phase.SLIDING;
         blocksPlaced = 0;
         score = 0;
+        combo = 0;
         currentWidth = Tunables.START_WIDTH;
     }
 
     /**
      * Record a successful placement; the next block spawns at {@code newWidth}.
      *
-     * <p>Score is simply the number of blocks placed for now. The combo bonus that scales
-     * this on perfect streaks arrives in increment 3.
+     * <p>A perfect placement extends the combo and scores a bonus that scales with the
+     * streak length; any imperfect placement banks a flat point and breaks the combo.
+     *
+     * @param perfect    whether the drop was a perfect (edge-aligned) placement
+     * @param newWidth   width the tower top now has (and the next block spawns with)
      */
-    public void recordPlacement(float newWidth) {
+    public void recordPlacement(boolean perfect, float newWidth) {
         blocksPlaced++;
-        score++;
+        if (perfect) {
+            combo++;
+            score += 1 + combo * Tunables.COMBO_BONUS_PER_STEP;
+        } else {
+            combo = 0;
+            score += 1;
+        }
         currentWidth = newWidth;
     }
 
     public int getScore() {
         return score;
+    }
+
+    public int getCombo() {
+        return combo;
     }
 
     public void gameOver() {

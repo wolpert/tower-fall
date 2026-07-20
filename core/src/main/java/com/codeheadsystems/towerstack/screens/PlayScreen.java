@@ -145,17 +145,34 @@ public class PlayScreen extends ScreenAdapter {
             return;
         }
 
-        // The surviving overlap becomes the new tower top. (The shorn slice in the result
-        // is ignored for now; the juice pass will turn it into tumbling debris.)
-        Block placed = new Block(
-                result.getSurvivingLeft(), moving.getBottom(),
-                result.getSurvivingWidth(), Tunables.BLOCK_HEIGHT,
-                moving.getColor());
+        boolean perfect = result.getType() == DropResult.Type.PERFECT;
+        Block placed = perfect ? buildPerfectBlock(top) : buildSlicedBlock(result);
+
+        // The shorn slice in a partial result is ignored for now; the juice pass will turn
+        // it into tumbling debris.
         tower.add(placed);
-        state.recordPlacement(result.getSurvivingWidth());
+        state.recordPlacement(perfect, placed.getWidth());
 
         spawnMovingBlock();
         cameraRig.followTop(tower.top().topEdge());
+    }
+
+    /**
+     * A perfect placement keeps its full footprint and regrows a little, rewarding precision
+     * by widening the tower back out. The regrown block is centered on the block beneath.
+     */
+    private Block buildPerfectBlock(Block top) {
+        float width = Math.min(Tunables.START_WIDTH, top.getWidth() + Tunables.PERFECT_REGROWTH);
+        float left = top.centerX() - width / 2f;
+        return new Block(left, moving.getBottom(), width, Tunables.BLOCK_HEIGHT, moving.getColor());
+    }
+
+    /** A partial placement narrows the tower to the surviving overlap. */
+    private Block buildSlicedBlock(DropResult result) {
+        return new Block(
+                result.getSurvivingLeft(), moving.getBottom(),
+                result.getSurvivingWidth(), Tunables.BLOCK_HEIGHT,
+                moving.getColor());
     }
 
     private void draw() {
@@ -180,7 +197,7 @@ public class PlayScreen extends ScreenAdapter {
         if (state.isGameOver()) {
             hud.renderGameOver(state.getScore(), scoreStore.best(), newBest);
         } else {
-            hud.renderPlaying(state.getScore());
+            hud.renderPlaying(state.getScore(), state.getCombo());
         }
     }
 

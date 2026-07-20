@@ -53,4 +53,11 @@ public final class Tunables {
 
     /** Width regained on a perfect placement, capped at {@link #START_WIDTH}. */
     public static final float PERFECT_REGROWTH = 14f;
+
+    /**
+     * Bonus points granted per combo level on a perfect placement, on top of the flat +1
+     * for the block. A perfect at combo level {@code n} scores {@code 1 + n * this}, so a
+     * streak ramps up (build brief §5, combo scoring = bonus points + width regrowth).
+     */
+    public static final int COMBO_BONUS_PER_STEP = 1;
 }
