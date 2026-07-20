@@ -21,9 +21,15 @@ public final class Tunables {
 
     /**
      * Screen height at which the current top of the tower is kept. The camera rises so
-     * this band stays fixed as the tower climbs (a snap for now; eased in increment 2).
+     * this band stays fixed as the tower climbs.
      */
     public static final float TOP_BAND_Y = WORLD_HEIGHT * 0.60f;
+
+    /**
+     * How briskly the camera eases toward its target height, as an exponential-smoothing
+     * rate (larger = snappier). Applied frame-rate-independently as {@code 1 - e^(-rate*dt)}.
+     */
+    public static final float CAMERA_RISE_RATE = 9f;
 
     // --- Block geometry ---------------------------------------------------
 

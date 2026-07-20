@@ -11,19 +11,25 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.codeheadsystems.towerstack.TowerStackGame;
 import com.codeheadsystems.towerstack.config.Tunables;
+import com.codeheadsystems.towerstack.effects.CameraRig;
 import com.codeheadsystems.towerstack.model.Block;
 import com.codeheadsystems.towerstack.model.DropResult;
 import com.codeheadsystems.towerstack.model.GameState;
 import com.codeheadsystems.towerstack.model.SliceMath;
 import com.codeheadsystems.towerstack.model.Tower;
+import com.codeheadsystems.towerstack.render.HudRenderer;
+import com.codeheadsystems.towerstack.util.ScoreStore;
 
 /**
- * The playable loop (build brief §3), grey-box edition — increment 1.
+ * The playable loop (build brief §3).
  *
  * <p>A block slides left/right at the top of the tower; one tap drops it; the overhang is
  * sliced away and the next block inherits the surviving width; a total miss ends the run
- * and the next tap restarts. No juice yet — rectangles and a snap camera. Rendering is
- * inlined here for now; it moves into a dedicated renderer during the render/juice pass.
+ * and the next tap restarts. As of increment 2 the camera eases upward per placement, the
+ * live score is shown, and the best score persists across runs.
+ *
+ * <p>Still no juice beyond the camera rise — blocks are flat rectangles. Block rendering is
+ * inlined here; it moves into a dedicated renderer during the render/juice pass.
  */
 public class PlayScreen extends ScreenAdapter {
 
@@ -34,18 +40,25 @@ public class PlayScreen extends ScreenAdapter {
     private final OrthographicCamera camera;
     private final Viewport viewport;
     private final ShapeRenderer shapes;
+    private final CameraRig cameraRig;
+    private final HudRenderer hud;
+    private final ScoreStore scoreStore;
 
     private final GameState state;
     private final Tower tower;
 
     private Block moving;
     private int direction;
+    private boolean newBest;
 
     public PlayScreen(TowerStackGame game) {
         this.game = game;
         this.camera = new OrthographicCamera();
         this.viewport = new FitViewport(Tunables.WORLD_WIDTH, Tunables.WORLD_HEIGHT, camera);
         this.shapes = new ShapeRenderer();
+        this.cameraRig = new CameraRig(camera);
+        this.hud = new HudRenderer();
+        this.scoreStore = new ScoreStore();
         this.state = new GameState();
         this.tower = new Tower();
     }
@@ -59,13 +72,15 @@ public class PlayScreen extends ScreenAdapter {
     private void startRun() {
         state.reset();
         tower.clear();
+        newBest = false;
 
         float baseLeft = (Tunables.WORLD_WIDTH - Tunables.START_WIDTH) / 2f;
         tower.add(new Block(baseLeft, 0f, Tunables.START_WIDTH, Tunables.BLOCK_HEIGHT,
                 colorForHeight(0)));
 
         spawnMovingBlock();
-        snapCameraToTop();
+        cameraRig.followTop(tower.top().topEdge());
+        cameraRig.snap();
     }
 
     /** Spawn the next moving block at the left edge, resting on the current tower top. */
@@ -93,6 +108,7 @@ public class PlayScreen extends ScreenAdapter {
         } else if (dropRequested()) {
             startRun();
         }
+        cameraRig.update(delta);
     }
 
     /** All three inputs — tap, left-click, spacebar — collapse to one "drop" action. */
@@ -125,6 +141,7 @@ public class PlayScreen extends ScreenAdapter {
 
         if (result.isMiss()) {
             state.gameOver();
+            newBest = scoreStore.submit(state.getScore());
             return;
         }
 
@@ -138,22 +155,11 @@ public class PlayScreen extends ScreenAdapter {
         state.recordPlacement(result.getSurvivingWidth());
 
         spawnMovingBlock();
-        snapCameraToTop();
-    }
-
-    /**
-     * Keep the top of the tower parked at {@link Tunables#TOP_BAND_Y} on screen. A hard
-     * snap for now; increment 2 replaces this with a smooth eased rise.
-     */
-    private void snapCameraToTop() {
-        float topWorldY = tower.top().topEdge();
-        camera.position.x = Tunables.WORLD_WIDTH / 2f;
-        camera.position.y = topWorldY + Tunables.WORLD_HEIGHT / 2f - Tunables.TOP_BAND_Y;
-        camera.update();
+        cameraRig.followTop(tower.top().topEdge());
     }
 
     private void draw() {
-        // A faint red wash on game over so the state is unmistakable even without text.
+        // A faint red wash on game over so the state is unmistakable.
         if (state.isGameOver()) {
             Gdx.gl.glClearColor(0.16f, 0.09f, 0.10f, 1f);
         } else {
@@ -163,15 +169,19 @@ public class PlayScreen extends ScreenAdapter {
 
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-
         for (Block block : tower.blocks()) {
             drawBlock(block);
         }
         if (state.isPlaying()) {
             drawBlock(moving);
         }
-
         shapes.end();
+
+        if (state.isGameOver()) {
+            hud.renderGameOver(state.getScore(), scoreStore.best(), newBest);
+        } else {
+            hud.renderPlaying(state.getScore());
+        }
     }
 
     private void drawBlock(Block block) {
@@ -194,10 +204,12 @@ public class PlayScreen extends ScreenAdapter {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
+        hud.resize(width, height);
     }
 
     @Override
     public void dispose() {
         shapes.dispose();
+        hud.dispose();
     }
 }

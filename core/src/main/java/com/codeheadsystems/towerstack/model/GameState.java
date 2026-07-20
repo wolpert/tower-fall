@@ -18,6 +18,7 @@ public class GameState {
 
     private Phase phase;
     private int blocksPlaced;
+    private int score;
     private float currentWidth;
 
     public GameState() {
@@ -28,13 +29,24 @@ public class GameState {
     public void reset() {
         phase = Phase.SLIDING;
         blocksPlaced = 0;
+        score = 0;
         currentWidth = Tunables.START_WIDTH;
     }
 
-    /** Record a successful placement; the next block spawns at {@code newWidth}. */
+    /**
+     * Record a successful placement; the next block spawns at {@code newWidth}.
+     *
+     * <p>Score is simply the number of blocks placed for now. The combo bonus that scales
+     * this on perfect streaks arrives in increment 3.
+     */
     public void recordPlacement(float newWidth) {
         blocksPlaced++;
+        score++;
         currentWidth = newWidth;
+    }
+
+    public int getScore() {
+        return score;
     }
 
     public void gameOver() {
