@@ -1,0 +1,5 @@
+rootProject.name = 'tower-fall'
+
+// Android is intentionally deferred until the desktop game feels good (see build brief §9.7).
+include 'core'
+include 'lwjgl3'

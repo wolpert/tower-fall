@@ -1,0 +1,20 @@
+// Platform-agnostic game code. Depends only on the libGDX core API — no backend,
+// no natives — so it can be shared by the desktop (lwjgl3) and, later, Android launchers.
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    // Java 17 bytecode: modern, and Android-friendly for when that module lands.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    api "com.badlogicgames.gdx:gdx:$gdxVersion"
+}

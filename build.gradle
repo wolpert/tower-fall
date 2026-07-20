@@ -1,0 +1,11 @@
+// Root build script.
+//
+// Per-module configuration lives in each module's own build.gradle (core, lwjgl3)
+// rather than in an allprojects/subprojects block. It is a touch more verbose but
+// keeps each module self-describing and avoids Gradle's cross-project configuration
+// deprecations — easier to read and to graft the Android module onto later.
+
+wrapper {
+    gradleVersion = '8.10.2'
+    distributionType = Wrapper.DistributionType.BIN
+}
