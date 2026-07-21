@@ -1,18 +1,18 @@
 package com.codeheadsystems.towerstack;
 
 import com.badlogic.gdx.Game;
-import com.codeheadsystems.towerstack.screens.PlayScreen;
+import com.codeheadsystems.towerstack.screens.TitleScreen;
 
 /**
  * Application entry point. Owns the screen stack.
  *
- * <p>For now it boots straight into the play loop; the title and game-over screens are
- * added in the state-screens increment (build brief §9.5).
+ * <p>Boots into the title screen; from there a tap starts a run, and game over is presented
+ * as a phase within the play screen so the camera can hold on the settling tower.
  */
 public class TowerStackGame extends Game {
 
     @Override
     public void create() {
-        setScreen(new PlayScreen(this));
+        setScreen(new TitleScreen(this));
     }
 }

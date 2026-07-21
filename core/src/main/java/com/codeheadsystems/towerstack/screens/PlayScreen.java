@@ -3,6 +3,7 @@ package com.codeheadsystems.towerstack.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -21,8 +22,9 @@ import com.codeheadsystems.towerstack.model.GameState;
 import com.codeheadsystems.towerstack.model.SliceMath;
 import com.codeheadsystems.towerstack.model.Tower;
 import com.codeheadsystems.towerstack.render.BackgroundRenderer;
-import com.codeheadsystems.towerstack.render.HudRenderer;
 import com.codeheadsystems.towerstack.render.TowerRenderer;
+import com.codeheadsystems.towerstack.ui.ScreenFade;
+import com.codeheadsystems.towerstack.ui.TextRenderer;
 import com.codeheadsystems.towerstack.util.ScoreStore;
 
 /**
@@ -50,7 +52,8 @@ public class PlayScreen extends ScreenAdapter {
     // Renderers.
     private final BackgroundRenderer background;
     private final TowerRenderer towerRenderer;
-    private final HudRenderer hud;
+    private final TextRenderer text;
+    private final ScreenFade fade;
 
     // Effects.
     private final CameraRig cameraRig;
@@ -75,7 +78,8 @@ public class PlayScreen extends ScreenAdapter {
 
         this.background = new BackgroundRenderer();
         this.towerRenderer = new TowerRenderer();
-        this.hud = new HudRenderer();
+        this.text = new TextRenderer();
+        this.fade = new ScreenFade();
 
         this.cameraRig = new CameraRig(camera);
         this.squash = new SquashStretch();
@@ -100,6 +104,7 @@ public class PlayScreen extends ScreenAdapter {
         debris.clear();
         burst.clear();
         newBest = false;
+        fade.start(Tunables.PLAY_FADE_IN); // fade in on first entry and on every retry
 
         float baseLeft = (Tunables.WORLD_WIDTH - Tunables.START_WIDTH) / 2f;
         tower.add(new Block(baseLeft, 0f, Tunables.START_WIDTH, Tunables.BLOCK_HEIGHT,
@@ -142,6 +147,7 @@ public class PlayScreen extends ScreenAdapter {
         debris.update(delta, cameraRig.viewBottom());
         burst.update(delta);
         cameraRig.update(delta);
+        fade.update(delta);
     }
 
     /** All three inputs — tap, left-click, spacebar — collapse to one "drop" action. */
@@ -254,24 +260,43 @@ public class PlayScreen extends ScreenAdapter {
         burst.draw(shapes);
         shapes.end();
 
+        drawHud();
+        fade.render();
+    }
+
+    private void drawHud() {
+        text.begin();
         if (state.isGameOver()) {
-            hud.renderGameOver(state.getScore(), scoreStore.best(), newBest);
+            text.drawCentered("GAME OVER", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 1.8f);
+            text.drawCentered("Score  " + state.getScore(), Tunables.WORLD_HEIGHT * 0.53f, Color.WHITE, 1.2f);
+            if (newBest) {
+                text.drawCentered("New Best!", Tunables.WORLD_HEIGHT * 0.46f, Color.GOLD, 1.2f);
+            } else {
+                text.drawCentered("Best  " + scoreStore.best(), Tunables.WORLD_HEIGHT * 0.46f, Color.LIGHT_GRAY, 1.2f);
+            }
+            text.drawCentered("tap to retry", Tunables.WORLD_HEIGHT * 0.38f, Color.LIGHT_GRAY, 1.1f);
         } else {
-            hud.renderPlaying(state.getScore(), state.getCombo());
+            text.drawCentered(Integer.toString(state.getScore()), Tunables.WORLD_HEIGHT * 0.90f, Color.WHITE, 1.8f);
+            if (state.getCombo() >= 2) {
+                text.drawCentered("COMBO x" + state.getCombo(), Tunables.WORLD_HEIGHT * 0.84f, Color.GOLD, 1.2f);
+            }
         }
+        text.end();
     }
 
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
         background.resize(width, height);
-        hud.resize(width, height);
+        text.resize(width, height);
+        fade.resize(width, height);
     }
 
     @Override
     public void dispose() {
         shapes.dispose();
         background.dispose();
-        hud.dispose();
+        text.dispose();
+        fade.dispose();
     }
 }

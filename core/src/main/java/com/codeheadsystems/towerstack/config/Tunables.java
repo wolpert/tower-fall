@@ -115,4 +115,10 @@ public final class Tunables {
     public static final float COLOR_HUE_STEP = 7f; // degrees of hue per block placed
     public static final float COLOR_SATURATION = 0.50f;
     public static final float COLOR_VALUE = 0.86f;
+
+    // --- Screen transitions -----------------------------------------------
+    // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
+
+    public static final float TITLE_FADE_IN = 0.40f;
+    public static final float PLAY_FADE_IN = 0.28f;
 }
