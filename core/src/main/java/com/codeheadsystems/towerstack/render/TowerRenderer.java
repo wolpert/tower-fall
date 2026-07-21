@@ -1,0 +1,47 @@
+package com.codeheadsystems.towerstack.render;
+
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.codeheadsystems.towerstack.effects.SquashStretch;
+import com.codeheadsystems.towerstack.model.Block;
+import com.codeheadsystems.towerstack.model.Tower;
+import java.util.List;
+
+/**
+ * Draws the tower's blocks and the moving block. The most-recently-landed block (the current
+ * top) is drawn through the active {@link SquashStretch}, anchored at its bottom-center; all
+ * other blocks draw at rest.
+ *
+ * <p>Draws into a caller-managed {@link ShapeRenderer} (already begun in {@code Filled} mode
+ * with the world projection set), so block, debris and burst rendering share one batch.
+ */
+public class TowerRenderer {
+
+    public void drawTower(ShapeRenderer shapes, Tower tower, SquashStretch squash) {
+        List<Block> blocks = tower.blocks();
+        for (int i = 0; i < blocks.size(); i++) {
+            Block block = blocks.get(i);
+            if (i == blocks.size() - 1) {
+                drawSquashed(shapes, block, squash);
+            } else {
+                drawPlain(shapes, block);
+            }
+        }
+    }
+
+    public void drawMoving(ShapeRenderer shapes, Block moving) {
+        drawPlain(shapes, moving);
+    }
+
+    private void drawPlain(ShapeRenderer shapes, Block block) {
+        shapes.setColor(block.getColor());
+        shapes.rect(block.getLeft(), block.getBottom(), block.getWidth(), block.getHeight());
+    }
+
+    private void drawSquashed(ShapeRenderer shapes, Block block, SquashStretch squash) {
+        float width = block.getWidth() * squash.scaleX();
+        float height = block.getHeight() * squash.scaleY();
+        float left = block.centerX() - width / 2f; // anchored at bottom-center
+        shapes.setColor(block.getColor());
+        shapes.rect(left, block.getBottom(), width, height);
+    }
+}

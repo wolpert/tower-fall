@@ -1,26 +1,35 @@
 package com.codeheadsystems.towerstack.effects;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.math.MathUtils;
 import com.codeheadsystems.towerstack.config.Tunables;
 
 /**
- * Owns the world camera and eases it upward so the top of the tower stays parked at a fixed
- * screen band as the stack climbs (build brief §6, "camera rise" — the effect that does most
- * of the "feels good" work).
+ * Owns the world camera. Two jobs, both from build brief §6:
  *
- * <p>Isolated and tunable: the only knob is {@link Tunables#CAMERA_RISE_RATE}. The camera's
- * x is fixed at the middle of the world; only y follows the tower.
+ * <ul>
+ *   <li><b>Camera rise</b> — eases the view upward so the top of the tower stays parked at a
+ *       fixed screen band as the stack climbs (the effect that does most of the "feels good"
+ *       work).</li>
+ *   <li><b>Camera punch / micro-shake</b> — a small trauma impulse on landing and a bigger
+ *       one on a miss, decaying quickly.</li>
+ * </ul>
  *
- * <p>Camera-punch / micro-shake on landing and miss will layer on here in the juice pass.
+ * <p>The eased base position is tracked separately from the camera's actual position so the
+ * additive shake offset never feeds back into the smoothing.
  */
 public class CameraRig {
 
     private final OrthographicCamera camera;
+    private final float centerX;
+
+    private float positionY; // eased base height, before shake
     private float targetY;
+    private float trauma;    // 0..1, decays over time
 
     public CameraRig(OrthographicCamera camera) {
         this.camera = camera;
-        this.camera.position.x = Tunables.WORLD_WIDTH / 2f;
+        this.centerX = Tunables.WORLD_WIDTH / 2f;
     }
 
     /** Aim the camera so the given world-y (a tower top edge) rests at {@link Tunables#TOP_BAND_Y}. */
@@ -30,18 +39,39 @@ public class CameraRig {
 
     /** Jump instantly to the current target (used when starting a run). */
     public void snap() {
-        camera.position.y = targetY;
-        camera.update();
+        positionY = targetY;
+        trauma = 0f;
+        apply(0f, 0f);
     }
 
-    /** Ease toward the target height. Frame-rate-independent exponential smoothing. */
+    /** Add a trauma impulse (e.g. {@link Tunables#LAND_PUNCH} or {@link Tunables#MISS_PUNCH}). */
+    public void punch(float amount) {
+        trauma = Math.min(1f, trauma + amount);
+    }
+
+    /** Ease toward the target height and apply decaying shake. Frame-rate-independent. */
     public void update(float delta) {
         float alpha = 1f - (float) Math.exp(-Tunables.CAMERA_RISE_RATE * delta);
-        camera.position.y += (targetY - camera.position.y) * alpha;
+        positionY += (targetY - positionY) * alpha;
+
+        trauma = Math.max(0f, trauma - Tunables.CAMERA_TRAUMA_DECAY * delta);
+        float shake = trauma * trauma; // ease the falloff so small trauma is gentle
+        float offsetX = shake * Tunables.CAMERA_MAX_SHAKE * MathUtils.random(-1f, 1f);
+        float offsetY = shake * Tunables.CAMERA_MAX_SHAKE * MathUtils.random(-1f, 1f);
+        apply(offsetX, offsetY);
+    }
+
+    private void apply(float offsetX, float offsetY) {
+        camera.position.set(centerX + offsetX, positionY + offsetY, 0f);
         camera.update();
     }
 
     public OrthographicCamera getCamera() {
         return camera;
+    }
+
+    /** World-y of the bottom edge of the view — used to cull debris that has fallen away. */
+    public float viewBottom() {
+        return positionY - Tunables.WORLD_HEIGHT / 2f;
     }
 }

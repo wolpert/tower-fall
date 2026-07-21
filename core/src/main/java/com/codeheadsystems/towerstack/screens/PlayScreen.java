@@ -3,7 +3,6 @@ package com.codeheadsystems.towerstack.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -12,24 +11,31 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.codeheadsystems.towerstack.TowerStackGame;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.CameraRig;
+import com.codeheadsystems.towerstack.effects.ColorGradient;
+import com.codeheadsystems.towerstack.effects.DebrisField;
+import com.codeheadsystems.towerstack.effects.PerfectBurst;
+import com.codeheadsystems.towerstack.effects.SquashStretch;
 import com.codeheadsystems.towerstack.model.Block;
 import com.codeheadsystems.towerstack.model.DropResult;
 import com.codeheadsystems.towerstack.model.GameState;
 import com.codeheadsystems.towerstack.model.SliceMath;
 import com.codeheadsystems.towerstack.model.Tower;
+import com.codeheadsystems.towerstack.render.BackgroundRenderer;
 import com.codeheadsystems.towerstack.render.HudRenderer;
+import com.codeheadsystems.towerstack.render.TowerRenderer;
 import com.codeheadsystems.towerstack.util.ScoreStore;
 
 /**
- * The playable loop (build brief §3).
+ * The playable loop (build brief §3), now with the full juice pass (§6).
  *
- * <p>A block slides left/right at the top of the tower; one tap drops it; the overhang is
- * sliced away and the next block inherits the surviving width; a total miss ends the run
- * and the next tap restarts. As of increment 2 the camera eases upward per placement, the
- * live score is shown, and the best score persists across runs.
+ * <p>A block eases side-to-side atop the tower; one tap drops it; the overhang shears off as
+ * tumbling debris and the next block inherits the surviving width; a perfect placement snaps
+ * flush, regrows, and pops a combo-scaled burst; a total miss flings the block away, punches
+ * the camera, and ends the run. The camera rises smoothly, blocks squash on landing, and the
+ * palette drifts with height.
  *
- * <p>Still no juice beyond the camera rise — blocks are flat rectangles. Block rendering is
- * inlined here; it moves into a dedicated renderer during the render/juice pass.
+ * <p>This screen stays a thin orchestrator: it owns the state machine and hands work to the
+ * model (slice math, scoring) and to the isolated renderers and effect components.
  */
 public class PlayScreen extends ScreenAdapter {
 
@@ -40,10 +46,20 @@ public class PlayScreen extends ScreenAdapter {
     private final OrthographicCamera camera;
     private final Viewport viewport;
     private final ShapeRenderer shapes;
-    private final CameraRig cameraRig;
-    private final HudRenderer hud;
-    private final ScoreStore scoreStore;
 
+    // Renderers.
+    private final BackgroundRenderer background;
+    private final TowerRenderer towerRenderer;
+    private final HudRenderer hud;
+
+    // Effects.
+    private final CameraRig cameraRig;
+    private final SquashStretch squash;
+    private final DebrisField debris;
+    private final PerfectBurst burst;
+    private final ColorGradient colors;
+
+    private final ScoreStore scoreStore;
     private final GameState state;
     private final Tower tower;
 
@@ -56,8 +72,17 @@ public class PlayScreen extends ScreenAdapter {
         this.camera = new OrthographicCamera();
         this.viewport = new FitViewport(Tunables.WORLD_WIDTH, Tunables.WORLD_HEIGHT, camera);
         this.shapes = new ShapeRenderer();
-        this.cameraRig = new CameraRig(camera);
+
+        this.background = new BackgroundRenderer();
+        this.towerRenderer = new TowerRenderer();
         this.hud = new HudRenderer();
+
+        this.cameraRig = new CameraRig(camera);
+        this.squash = new SquashStretch();
+        this.debris = new DebrisField();
+        this.burst = new PerfectBurst();
+        this.colors = new ColorGradient();
+
         this.scoreStore = new ScoreStore();
         this.state = new GameState();
         this.tower = new Tower();
@@ -68,15 +93,17 @@ public class PlayScreen extends ScreenAdapter {
         startRun();
     }
 
-    /** Reset everything for a fresh run: base block, first moving block, camera. */
+    /** Reset everything for a fresh run: base block, first moving block, camera, effects. */
     private void startRun() {
         state.reset();
         tower.clear();
+        debris.clear();
+        burst.clear();
         newBest = false;
 
         float baseLeft = (Tunables.WORLD_WIDTH - Tunables.START_WIDTH) / 2f;
         tower.add(new Block(baseLeft, 0f, Tunables.START_WIDTH, Tunables.BLOCK_HEIGHT,
-                colorForHeight(0)));
+                colors.blockColor(0)));
 
         spawnMovingBlock();
         cameraRig.followTop(tower.top().topEdge());
@@ -88,7 +115,7 @@ public class PlayScreen extends ScreenAdapter {
         Block top = tower.top();
         float width = state.getCurrentWidth();
         float bottom = top.topEdge() + DROP_GAP;
-        moving = new Block(0f, bottom, width, Tunables.BLOCK_HEIGHT, colorForHeight(tower.size()));
+        moving = new Block(0f, bottom, width, Tunables.BLOCK_HEIGHT, colors.blockColor(tower.size()));
         direction = +1;
     }
 
@@ -108,6 +135,12 @@ public class PlayScreen extends ScreenAdapter {
         } else if (dropRequested()) {
             startRun();
         }
+
+        // Effects advance every frame, whatever the phase, so debris keeps falling and the
+        // camera settles even on the game-over screen.
+        squash.update(delta);
+        debris.update(delta, cameraRig.viewBottom());
+        burst.update(delta);
         cameraRig.update(delta);
     }
 
@@ -116,12 +149,15 @@ public class PlayScreen extends ScreenAdapter {
         return Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
     }
 
-    /** Slide the block horizontally, bouncing off the world edges. */
+    /**
+     * Slide the block horizontally, bouncing off the world edges and easing at the
+     * turnarounds so the motion feels alive before it even lands (build brief §6).
+     */
     private void moveBlock(float delta) {
-        float speed = state.currentSpeed();
-        float left = moving.getLeft() + direction * speed * delta;
-
         float maxLeft = Tunables.WORLD_WIDTH - moving.getWidth();
+        float ease = edgeEase(maxLeft > 0f ? moving.getLeft() / maxLeft : 0.5f);
+        float left = moving.getLeft() + direction * state.currentSpeed() * ease * delta;
+
         if (left <= 0f) {
             left = 0f;
             direction = +1;
@@ -132,6 +168,12 @@ public class PlayScreen extends ScreenAdapter {
         moving.setLeft(left);
     }
 
+    /** Speed multiplier across the track: slow at the edges (t=0,1), full through the middle. */
+    private float edgeEase(float t) {
+        float shaped = (float) Math.sin(Math.PI * t);
+        return Tunables.SLIDE_EDGE_EASE + (1f - Tunables.SLIDE_EDGE_EASE) * shaped;
+    }
+
     private void dropBlock() {
         Block top = tower.top();
         DropResult result = SliceMath.slice(
@@ -140,21 +182,38 @@ public class PlayScreen extends ScreenAdapter {
                 Tunables.PERFECT_TOLERANCE);
 
         if (result.isMiss()) {
-            state.gameOver();
-            newBest = scoreStore.submit(state.getScore());
+            handleMiss(top);
             return;
         }
 
         boolean perfect = result.getType() == DropResult.Type.PERFECT;
         Block placed = perfect ? buildPerfectBlock(top) : buildSlicedBlock(result);
 
-        // The shorn slice in a partial result is ignored for now; the juice pass will turn
-        // it into tumbling debris.
         tower.add(placed);
         state.recordPlacement(perfect, placed.getWidth());
 
+        squash.trigger();
+        cameraRig.punch(Tunables.LAND_PUNCH);
+        if (perfect) {
+            burst.trigger(placed.centerX(), placed.getBottom(), state.getCombo(), placed.getColor());
+        } else if (result.getSliceWidth() > 0f) {
+            int outward = result.getSliceLeft() < placed.getLeft() ? -1 : +1;
+            debris.spawn(result.getSliceLeft(), moving.getBottom(), result.getSliceWidth(),
+                    Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
+        }
+
         spawnMovingBlock();
         cameraRig.followTop(tower.top().topEdge());
+    }
+
+    /** A total miss: fling the block away as debris, punch the camera, end the run. */
+    private void handleMiss(Block top) {
+        state.gameOver();
+        newBest = scoreStore.submit(state.getScore());
+        cameraRig.punch(Tunables.MISS_PUNCH);
+        int outward = moving.centerX() < top.centerX() ? -1 : +1;
+        debris.spawn(moving.getLeft(), moving.getBottom(), moving.getWidth(),
+                Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
     }
 
     /**
@@ -176,22 +235,23 @@ public class PlayScreen extends ScreenAdapter {
     }
 
     private void draw() {
-        // A faint red wash on game over so the state is unmistakable.
-        if (state.isGameOver()) {
-            Gdx.gl.glClearColor(0.16f, 0.09f, 0.10f, 1f);
-        } else {
-            Gdx.gl.glClearColor(0.11f, 0.12f, 0.16f, 1f);
-        }
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        int height = state.getBlocksPlaced();
+        background.draw(colors.backgroundBottom(height), colors.backgroundTop(height));
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        for (Block block : tower.blocks()) {
-            drawBlock(block);
-        }
+        towerRenderer.drawTower(shapes, tower, squash);
         if (state.isPlaying()) {
-            drawBlock(moving);
+            towerRenderer.drawMoving(shapes, moving);
         }
+        debris.draw(shapes);
+        burst.draw(shapes);
         shapes.end();
 
         if (state.isGameOver()) {
@@ -201,32 +261,17 @@ public class PlayScreen extends ScreenAdapter {
         }
     }
 
-    private void drawBlock(Block block) {
-        shapes.setColor(block.getColor());
-        shapes.rect(block.getLeft(), block.getBottom(), block.getWidth(), block.getHeight());
-    }
-
-    /**
-     * Placeholder palette for the grey-box: a gentle hue drift with height so the stack is
-     * readable. The real height-driven gradient is a dedicated effect in the juice pass.
-     */
-    private Color colorForHeight(int index) {
-        float hue = (index * 12f) % 360f;
-        // Start opaque; fromHsv sets r/g/b and leaves alpha untouched.
-        Color color = new Color(0f, 0f, 0f, 1f);
-        color.fromHsv(hue, 0.45f, 0.85f);
-        return color;
-    }
-
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
+        background.resize(width, height);
         hud.resize(width, height);
     }
 
     @Override
     public void dispose() {
         shapes.dispose();
+        background.dispose();
         hud.dispose();
     }
 }

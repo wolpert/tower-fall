@@ -60,4 +60,59 @@ public final class Tunables {
      * streak ramps up (build brief §5, combo scoring = bonus points + width regrowth).
      */
     public static final int COMBO_BONUS_PER_STEP = 1;
+
+    // --- Juice: eased slide -----------------------------------------------
+
+    /**
+     * Minimum speed multiplier at the turnarounds (build brief §6, "eased block slide").
+     * The block slows toward the edges and runs full speed through the middle; 1.0 disables
+     * the easing entirely.
+     */
+    public static final float SLIDE_EDGE_EASE = 0.35f;
+
+    // --- Juice: landing squash & stretch ----------------------------------
+    // A damped spring: the block compresses on impact then springs back past 1.0 and settles.
+
+    public static final float SQUASH_AMPLITUDE = 0.26f;
+    public static final float SQUASH_DURATION = 0.45f;
+    public static final float SQUASH_DECAY = 9f;      // how fast the spring settles
+    public static final float SQUASH_FREQUENCY = 22f; // spring angular frequency (rad/s)
+
+    // --- Juice: slice debris ----------------------------------------------
+
+    public static final float DEBRIS_GRAVITY = 1900f;
+    public static final float DEBRIS_OUTWARD_SPEED = 150f;
+    public static final float DEBRIS_POP_SPEED = 130f;
+    public static final float DEBRIS_SPIN = 300f; // degrees/sec magnitude
+    public static final float DEBRIS_CULL_MARGIN = 60f;
+
+    // --- Juice: camera punch / micro-shake --------------------------------
+    // Trauma accumulates on impacts and decays; screen offset scales with trauma squared.
+
+    public static final float CAMERA_MAX_SHAKE = 20f;    // world units at full trauma
+    public static final float CAMERA_TRAUMA_DECAY = 1.9f; // trauma lost per second
+    public static final float LAND_PUNCH = 0.24f;         // trauma added on a landing
+    public static final float MISS_PUNCH = 0.65f;         // trauma added on a miss
+
+    // --- Juice: perfect-placement burst -----------------------------------
+    // Particle count and shockwave brightness ramp with the combo (build brief §6).
+
+    public static final int BURST_BASE_PARTICLES = 10;
+    public static final int BURST_PER_COMBO = 3;
+    public static final int BURST_MAX_PARTICLES = 46;
+    public static final float BURST_PARTICLE_SPEED = 230f;
+    public static final float BURST_PARTICLE_LIFE = 0.55f;
+    public static final float BURST_PARTICLE_SIZE = 6f;
+    public static final float BURST_GRAVITY = 320f;
+    public static final float SHOCKWAVE_SPEED = 900f;
+    public static final float SHOCKWAVE_LIFE = 0.30f;
+    public static final float SHOCKWAVE_THICKNESS = 4f;
+
+    // --- Juice: color gradient --------------------------------------------
+    // Block color drifts with height; the background is a dark tint of the same hue.
+
+    public static final float COLOR_BASE_HUE = 205f;
+    public static final float COLOR_HUE_STEP = 7f; // degrees of hue per block placed
+    public static final float COLOR_SATURATION = 0.50f;
+    public static final float COLOR_VALUE = 0.86f;
 }
