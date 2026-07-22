@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.codeheadsystems.towerstack.TowerStackGame;
@@ -23,7 +24,9 @@ import com.codeheadsystems.towerstack.model.GameState;
 import com.codeheadsystems.towerstack.model.SliceMath;
 import com.codeheadsystems.towerstack.model.Tower;
 import com.codeheadsystems.towerstack.render.BackgroundRenderer;
-import com.codeheadsystems.towerstack.render.TowerRenderer;
+import com.codeheadsystems.towerstack.render.BlockRenderer;
+import com.codeheadsystems.towerstack.render.FlatBlockRenderer;
+import com.codeheadsystems.towerstack.render.IsoBlockRenderer;
 import com.codeheadsystems.towerstack.ui.ScreenFade;
 import com.codeheadsystems.towerstack.ui.TextRenderer;
 import com.codeheadsystems.towerstack.util.ScoreStore;
@@ -53,9 +56,12 @@ public class PlayScreen extends ScreenAdapter {
 
     // Renderers.
     private final BackgroundRenderer background;
-    private final TowerRenderer towerRenderer;
+    private final BlockRenderer blockRenderer;
     private final TextRenderer text;
     private final ScreenFade fade;
+
+    // Scratch for mapping game points into render space when spawning effects.
+    private final Vector2 renderPoint = new Vector2();
 
     // Effects.
     private final CameraRig cameraRig;
@@ -80,8 +86,9 @@ public class PlayScreen extends ScreenAdapter {
         this.viewport = new FitViewport(Tunables.WORLD_WIDTH, Tunables.WORLD_HEIGHT, camera);
         this.shapes = new ShapeRenderer();
 
+        this.settings = new Settings();
         this.background = new BackgroundRenderer();
-        this.towerRenderer = new TowerRenderer();
+        this.blockRenderer = settings.isIsometric() ? new IsoBlockRenderer() : new FlatBlockRenderer();
         this.text = new TextRenderer();
         this.fade = new ScreenFade();
 
@@ -93,7 +100,6 @@ public class PlayScreen extends ScreenAdapter {
         this.audio = new GameAudio();
 
         this.scoreStore = new ScoreStore();
-        this.settings = new Settings();
         this.state = new GameState();
         this.tower = new Tower();
 
@@ -214,13 +220,15 @@ public class PlayScreen extends ScreenAdapter {
         squash.trigger();
         cameraRig.punch(Tunables.LAND_PUNCH);
         if (perfect) {
-            burst.trigger(placed.centerX(), placed.getBottom(), state.getCombo(), placed.getColor());
+            blockRenderer.project(placed.centerX(), placed.getBottom(), renderPoint);
+            burst.trigger(renderPoint.x, renderPoint.y, state.getCombo(), placed.getColor());
             audio.perfect(state.getCombo());
         } else {
             audio.land();
             if (result.getSliceWidth() > 0f) {
                 int outward = result.getSliceLeft() < placed.getLeft() ? -1 : +1;
-                debris.spawn(result.getSliceLeft(), moving.getBottom(), result.getSliceWidth(),
+                blockRenderer.project(result.getSliceLeft(), moving.getBottom(), renderPoint);
+                debris.spawn(renderPoint.x, renderPoint.y, result.getSliceWidth(),
                         Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
                 audio.slice();
             }
@@ -237,7 +245,8 @@ public class PlayScreen extends ScreenAdapter {
         cameraRig.punch(Tunables.MISS_PUNCH);
         audio.gameOver();
         int outward = moving.centerX() < top.centerX() ? -1 : +1;
-        debris.spawn(moving.getLeft(), moving.getBottom(), moving.getWidth(),
+        blockRenderer.project(moving.getLeft(), moving.getBottom(), renderPoint);
+        debris.spawn(renderPoint.x, renderPoint.y, moving.getWidth(),
                 Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
     }
 
@@ -271,9 +280,9 @@ public class PlayScreen extends ScreenAdapter {
 
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        towerRenderer.drawTower(shapes, tower, squash);
+        blockRenderer.drawTower(shapes, tower, squash);
         if (state.isPlaying()) {
-            towerRenderer.drawMoving(shapes, moving);
+            blockRenderer.drawMoving(shapes, moving);
         }
         debris.draw(shapes);
         burst.draw(shapes);

@@ -116,6 +116,18 @@ public final class Tunables {
     public static final float COLOR_SATURATION = 0.50f;
     public static final float COLOR_VALUE = 0.86f;
 
+    // --- Isometric view (cosmetic skin) -----------------------------------
+    // Renders each block as a 3D cuboid under a 2:1 dimetric projection. Gameplay is
+    // unchanged; only the drawing differs. Projection is centered on the world so a
+    // centered tower stays vertical, with the diamond top spreading symmetrically.
+
+    public static final float ISO_SCALE_X = 0.62f; // horizontal unit
+    public static final float ISO_SCALE_Y = 0.31f; // depth-induced vertical skew (~half of X)
+    public static final float ISO_DEPTH = 150f;     // fixed block depth into the scene
+    public static final float ISO_SHADE_TOP = 1.00f;
+    public static final float ISO_SHADE_FRONT = 0.78f;
+    public static final float ISO_SHADE_SIDE = 0.62f;
+
     // --- Parallax background ----------------------------------------------
     // Two layers of faint distant silhouettes that scroll down as the camera rises. Each
     // layer moves at a fraction of the camera's speed (near faster than far) and repeats

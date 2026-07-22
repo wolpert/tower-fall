@@ -34,9 +34,12 @@ public class TitleScreen extends ScreenAdapter {
     private final ScoreStore scoreStore;
     private final Settings settings;
 
-    // Tappable region for the sound toggle, in world coordinates.
+    // Tappable regions for the toggles, in world coordinates.
     private final Rectangle soundToggle = new Rectangle(
             Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.245f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
+    private final Rectangle viewToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.175f,
             Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
 
     public TitleScreen(TowerStackGame game) {
@@ -68,10 +71,17 @@ public class TitleScreen extends ScreenAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
             settings.toggleSound();
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.V)) {
+            settings.toggleIsometric();
+        }
         if (Gdx.input.justTouched()) {
             Vector2 world = text.unproject(Gdx.input.getX(), Gdx.input.getY());
             if (soundToggle.contains(world.x, world.y)) {
                 settings.toggleSound();
+                return false;
+            }
+            if (viewToggle.contains(world.x, world.y)) {
+                settings.toggleIsometric();
                 return false;
             }
             startGame();
@@ -100,6 +110,8 @@ public class TitleScreen extends ScreenAdapter {
         text.drawCentered("Best  " + scoreStore.best(), Tunables.WORLD_HEIGHT * 0.38f, Color.GOLD, 1.2f);
         text.drawCentered("Sound:  " + (settings.isSoundEnabled() ? "On" : "Off"),
                 Tunables.WORLD_HEIGHT * 0.27f, Color.LIGHT_GRAY, 1.1f);
+        text.drawCentered("View:  " + (settings.isIsometric() ? "Iso" : "Flat"),
+                Tunables.WORLD_HEIGHT * 0.20f, Color.LIGHT_GRAY, 1.1f);
         text.end();
 
         fade.render();
