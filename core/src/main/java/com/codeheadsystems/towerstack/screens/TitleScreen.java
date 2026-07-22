@@ -5,6 +5,8 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.codeheadsystems.towerstack.TowerStackGame;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.ColorGradient;
@@ -12,11 +14,12 @@ import com.codeheadsystems.towerstack.render.BackgroundRenderer;
 import com.codeheadsystems.towerstack.ui.ScreenFade;
 import com.codeheadsystems.towerstack.ui.TextRenderer;
 import com.codeheadsystems.towerstack.util.ScoreStore;
+import com.codeheadsystems.towerstack.util.Settings;
 
 /**
- * The idle/title screen (build brief §8): game name, a "tap to start" prompt, and the best
- * score, over the same height-driven gradient the game uses. One tap / click / spacebar drops
- * straight into a run.
+ * The idle/title screen (build brief §8): game name, a "tap to start" prompt, the best score,
+ * and a tappable sound on/off toggle. Tapping the toggle flips it; tapping anywhere else (or
+ * pressing space) starts a run. On desktop, {@code M} also toggles sound.
  *
  * <p>Transient — a fresh instance is created each time we return here, so it disposes its own
  * resources in {@link #hide()}.
@@ -29,6 +32,12 @@ public class TitleScreen extends ScreenAdapter {
     private final TextRenderer text;
     private final ScreenFade fade;
     private final ScoreStore scoreStore;
+    private final Settings settings;
+
+    // Tappable region for the sound toggle, in world coordinates.
+    private final Rectangle soundToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.245f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
 
     public TitleScreen(TowerStackGame game) {
         this.game = game;
@@ -37,6 +46,7 @@ public class TitleScreen extends ScreenAdapter {
         this.text = new TextRenderer();
         this.fade = new ScreenFade();
         this.scoreStore = new ScoreStore();
+        this.settings = new Settings();
     }
 
     @Override
@@ -46,17 +56,36 @@ public class TitleScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        if (startRequested()) {
-            game.setScreen(new PlayScreen(game));
-            return; // our resources are torn down in hide(); don't draw after handing off
+        if (handleInput()) {
+            return; // a run started; our resources are torn down in hide()
         }
-
         fade.update(delta);
         draw();
     }
 
-    private boolean startRequested() {
-        return Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+    /** @return true if a run was started (caller should stop touching this screen) */
+    private boolean handleInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            settings.toggleSound();
+        }
+        if (Gdx.input.justTouched()) {
+            Vector2 world = text.unproject(Gdx.input.getX(), Gdx.input.getY());
+            if (soundToggle.contains(world.x, world.y)) {
+                settings.toggleSound();
+                return false;
+            }
+            startGame();
+            return true;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            startGame();
+            return true;
+        }
+        return false;
+    }
+
+    private void startGame() {
+        game.setScreen(new PlayScreen(game));
     }
 
     private void draw() {
@@ -69,6 +98,8 @@ public class TitleScreen extends ScreenAdapter {
         text.drawCentered("TOWER STACK", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 2.4f);
         text.drawCentered("tap to start", Tunables.WORLD_HEIGHT * 0.46f, Color.LIGHT_GRAY, 1.2f);
         text.drawCentered("Best  " + scoreStore.best(), Tunables.WORLD_HEIGHT * 0.38f, Color.GOLD, 1.2f);
+        text.drawCentered("Sound:  " + (settings.isSoundEnabled() ? "On" : "Off"),
+                Tunables.WORLD_HEIGHT * 0.27f, Color.LIGHT_GRAY, 1.1f);
         text.end();
 
         fade.render();

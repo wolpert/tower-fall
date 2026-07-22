@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -38,6 +39,11 @@ public class TextRenderer implements Disposable {
 
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+    }
+
+    /** Convert screen/touch coordinates into this renderer's world space (for hit-testing). */
+    public Vector2 unproject(float screenX, float screenY) {
+        return viewport.unproject(new Vector2(screenX, screenY));
     }
 
     public void begin() {

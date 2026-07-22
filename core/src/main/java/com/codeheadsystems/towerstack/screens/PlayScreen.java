@@ -27,6 +27,7 @@ import com.codeheadsystems.towerstack.render.TowerRenderer;
 import com.codeheadsystems.towerstack.ui.ScreenFade;
 import com.codeheadsystems.towerstack.ui.TextRenderer;
 import com.codeheadsystems.towerstack.util.ScoreStore;
+import com.codeheadsystems.towerstack.util.Settings;
 
 /**
  * The playable loop (build brief §3), now with the full juice pass (§6).
@@ -65,6 +66,7 @@ public class PlayScreen extends ScreenAdapter {
     private final GameAudio audio;
 
     private final ScoreStore scoreStore;
+    private final Settings settings;
     private final GameState state;
     private final Tower tower;
 
@@ -91,8 +93,11 @@ public class PlayScreen extends ScreenAdapter {
         this.audio = new GameAudio();
 
         this.scoreStore = new ScoreStore();
+        this.settings = new Settings();
         this.state = new GameState();
         this.tower = new Tower();
+
+        audio.setMuted(!settings.isSoundEnabled());
     }
 
     @Override
@@ -134,6 +139,11 @@ public class PlayScreen extends ScreenAdapter {
     }
 
     private void update(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            settings.toggleSound();
+            audio.setMuted(!settings.isSoundEnabled());
+        }
+
         if (state.isPlaying()) {
             if (dropRequested()) {
                 dropBlock();

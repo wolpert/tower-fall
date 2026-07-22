@@ -18,7 +18,8 @@ import java.util.Random;
  */
 public class GameAudio implements Disposable {
 
-    private boolean enabled;
+    private boolean available; // whether an audio device/codec loaded successfully
+    private boolean muted;     // player's sound on/off choice
     private Sound land;
     private Sound slice;
     private Sound perfect;
@@ -30,37 +31,46 @@ public class GameAudio implements Disposable {
             slice = load("slice", buildSlice());
             perfect = load("perfect", buildPerfect());
             gameOver = load("gameover", buildGameOver());
-            enabled = true;
+            available = true;
         } catch (Exception e) {
-            enabled = false;
+            available = false;
             Gdx.app.error("GameAudio", "sound disabled: " + e.getMessage());
         }
     }
 
+    /** Enable/disable playback per the player's preference (does not free resources). */
+    public void setMuted(boolean muted) {
+        this.muted = muted;
+    }
+
+    private boolean canPlay() {
+        return available && !muted;
+    }
+
     /** Soft click when any block lands (an imperfect placement). */
     public void land() {
-        if (enabled) {
+        if (canPlay()) {
             land.play(Tunables.VOLUME_LAND);
         }
     }
 
     /** Whoosh when an overhang shears off. */
     public void slice() {
-        if (enabled) {
+        if (canPlay()) {
             slice.play(Tunables.VOLUME_SLICE);
         }
     }
 
     /** Bright tone on a perfect placement, pitched up with the combo. */
     public void perfect(int combo) {
-        if (enabled) {
+        if (canPlay()) {
             perfect.play(Tunables.VOLUME_PERFECT, pitchFor(combo), 0f);
         }
     }
 
     /** Low thud on a miss. */
     public void gameOver() {
-        if (enabled) {
+        if (canPlay()) {
             gameOver.play(Tunables.VOLUME_GAME_OVER);
         }
     }
