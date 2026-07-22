@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.codeheadsystems.towerstack.TowerStackGame;
+import com.codeheadsystems.towerstack.audio.GameAudio;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.CameraRig;
 import com.codeheadsystems.towerstack.effects.ColorGradient;
@@ -61,6 +62,7 @@ public class PlayScreen extends ScreenAdapter {
     private final DebrisField debris;
     private final PerfectBurst burst;
     private final ColorGradient colors;
+    private final GameAudio audio;
 
     private final ScoreStore scoreStore;
     private final GameState state;
@@ -86,6 +88,7 @@ public class PlayScreen extends ScreenAdapter {
         this.debris = new DebrisField();
         this.burst = new PerfectBurst();
         this.colors = new ColorGradient();
+        this.audio = new GameAudio();
 
         this.scoreStore = new ScoreStore();
         this.state = new GameState();
@@ -202,10 +205,15 @@ public class PlayScreen extends ScreenAdapter {
         cameraRig.punch(Tunables.LAND_PUNCH);
         if (perfect) {
             burst.trigger(placed.centerX(), placed.getBottom(), state.getCombo(), placed.getColor());
-        } else if (result.getSliceWidth() > 0f) {
-            int outward = result.getSliceLeft() < placed.getLeft() ? -1 : +1;
-            debris.spawn(result.getSliceLeft(), moving.getBottom(), result.getSliceWidth(),
-                    Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
+            audio.perfect(state.getCombo());
+        } else {
+            audio.land();
+            if (result.getSliceWidth() > 0f) {
+                int outward = result.getSliceLeft() < placed.getLeft() ? -1 : +1;
+                debris.spawn(result.getSliceLeft(), moving.getBottom(), result.getSliceWidth(),
+                        Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
+                audio.slice();
+            }
         }
 
         spawnMovingBlock();
@@ -217,6 +225,7 @@ public class PlayScreen extends ScreenAdapter {
         state.gameOver();
         newBest = scoreStore.submit(state.getScore());
         cameraRig.punch(Tunables.MISS_PUNCH);
+        audio.gameOver();
         int outward = moving.centerX() < top.centerX() ? -1 : +1;
         debris.spawn(moving.getLeft(), moving.getBottom(), moving.getWidth(),
                 Tunables.BLOCK_HEIGHT, moving.getColor(), outward);
@@ -298,5 +307,6 @@ public class PlayScreen extends ScreenAdapter {
         background.dispose();
         text.dispose();
         fade.dispose();
+        audio.dispose();
     }
 }

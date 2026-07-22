@@ -121,4 +121,16 @@ public final class Tunables {
 
     public static final float TITLE_FADE_IN = 0.40f;
     public static final float PLAY_FADE_IN = 0.28f;
+
+    // --- Audio ------------------------------------------------------------
+    // Playback volumes (0..1). The perfect tone's pitch rises with the combo.
+
+    public static final float VOLUME_LAND = 0.5f;
+    public static final float VOLUME_SLICE = 0.4f;
+    public static final float VOLUME_PERFECT = 0.55f;
+    public static final float VOLUME_GAME_OVER = 0.6f;
+
+    /** Pitch multiplier added per combo level to the perfect tone, capped for sanity. */
+    public static final float COMBO_PITCH_STEP = 0.06f;
+    public static final float COMBO_PITCH_MAX = 2.0f;
 }
