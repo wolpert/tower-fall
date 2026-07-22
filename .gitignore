@@ -15,6 +15,15 @@ build/
 bin/
 out/
 
+# Android / SDK
+local.properties
+android/libs/
+*.apk
+*.aab
+
+# Generated at runtime (procedural audio cache)
+towerstack-audio/
+
 # OS
 .DS_Store
 

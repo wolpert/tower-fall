@@ -1,0 +1,82 @@
+// Android launcher. Wraps the shared :core game in an AndroidApplication and packages the
+// libGDX native .so libraries per ABI.
+
+plugins {
+    id 'com.android.application' version '8.7.2'
+}
+
+android {
+    namespace 'com.codeheadsystems.towerstack'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.codeheadsystems.towerstack'
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets.main {
+        // Native libraries are extracted into libs/<abi> by copyAndroidNatives below.
+        jniLibs.srcDirs = ['libs']
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+// A separate configuration holding the per-ABI native artifacts, kept off the compile path.
+configurations { natives }
+
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+}
+
+// Extract the .so files from the natives jars into libs/<abi> so AGP packages them.
+tasks.register('copyAndroidNatives') {
+    doFirst {
+        file('libs/armeabi-v7a/').mkdirs()
+        file('libs/arm64-v8a/').mkdirs()
+        file('libs/x86/').mkdirs()
+        file('libs/x86_64/').mkdirs()
+
+        configurations.natives.files.each { jar ->
+            def abi = null
+            if (jar.name.endsWith('natives-armeabi-v7a.jar')) abi = 'armeabi-v7a'
+            if (jar.name.endsWith('natives-arm64-v8a.jar')) abi = 'arm64-v8a'
+            if (jar.name.endsWith('natives-x86.jar')) abi = 'x86'
+            if (jar.name.endsWith('natives-x86_64.jar')) abi = 'x86_64'
+            if (abi != null) {
+                copy {
+                    from zipTree(jar)
+                    into file("libs/$abi")
+                    include '*.so'
+                }
+            }
+        }
+    }
+}
+
+tasks.matching { it.name == 'preBuild' }.configureEach {
+    it.dependsOn 'copyAndroidNatives'
+}

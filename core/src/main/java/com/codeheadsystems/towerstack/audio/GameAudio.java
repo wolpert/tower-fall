@@ -126,8 +126,9 @@ public class GameAudio implements Disposable {
     }
 
     private Sound load(String name, float[] samples) {
-        FileHandle handle = Gdx.files.absolute(
-                System.getProperty("java.io.tmpdir") + "/towerstack-" + name + ".wav");
+        // Local storage is writable on every backend (app-internal on Android, working dir on
+        // desktop); writeBytes creates the parent directory as needed.
+        FileHandle handle = Gdx.files.local("towerstack-audio/" + name + ".wav");
         handle.writeBytes(ToneSynth.toWav(samples), false);
         return Gdx.audio.newSound(handle);
     }
