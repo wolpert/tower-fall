@@ -27,6 +27,14 @@ public class ColorGradient {
         return hsv(hueAt(height), 0.40f, 0.20f);
     }
 
+    /**
+     * Silhouette color for the parallax skyline — deliberately brighter than the background so
+     * the distant towers read against the dark gradient (drawn at low alpha for subtlety).
+     */
+    public Color parallax(int height) {
+        return hsv(hueAt(height), 0.45f, 0.42f);
+    }
+
     private float hueAt(int index) {
         return (Tunables.COLOR_BASE_HUE + index * Tunables.COLOR_HUE_STEP) % 360f;
     }

@@ -136,8 +136,8 @@ public final class Tunables {
     public static final float PARALLAX_PATTERN_HEIGHT = WORLD_HEIGHT * 1.4f;
     public static final float PARALLAX_FAR_FACTOR = 0.12f;
     public static final float PARALLAX_NEAR_FACTOR = 0.28f;
-    public static final float PARALLAX_FAR_ALPHA = 0.06f;
-    public static final float PARALLAX_NEAR_ALPHA = 0.10f;
+    public static final float PARALLAX_FAR_ALPHA = 0.16f;
+    public static final float PARALLAX_NEAR_ALPHA = 0.26f;
 
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
