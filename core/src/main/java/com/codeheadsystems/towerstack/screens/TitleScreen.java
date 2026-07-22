@@ -92,7 +92,7 @@ public class TitleScreen extends ScreenAdapter {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        background.draw(colors.backgroundBottom(0), colors.backgroundTop(0));
+        background.draw(colors.backgroundBottom(0), colors.backgroundTop(0), 0f);
 
         text.begin();
         text.drawCentered("TOWER STACK", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 2.4f);

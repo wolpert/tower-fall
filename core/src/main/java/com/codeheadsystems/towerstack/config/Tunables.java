@@ -116,6 +116,17 @@ public final class Tunables {
     public static final float COLOR_SATURATION = 0.50f;
     public static final float COLOR_VALUE = 0.86f;
 
+    // --- Parallax background ----------------------------------------------
+    // Two layers of faint distant silhouettes that scroll down as the camera rises. Each
+    // layer moves at a fraction of the camera's speed (near faster than far) and repeats
+    // every PATTERN_HEIGHT world units.
+
+    public static final float PARALLAX_PATTERN_HEIGHT = WORLD_HEIGHT * 1.4f;
+    public static final float PARALLAX_FAR_FACTOR = 0.12f;
+    public static final float PARALLAX_NEAR_FACTOR = 0.28f;
+    public static final float PARALLAX_FAR_ALPHA = 0.06f;
+    public static final float PARALLAX_NEAR_ALPHA = 0.10f;
+
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
 

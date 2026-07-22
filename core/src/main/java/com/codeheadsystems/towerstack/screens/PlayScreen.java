@@ -264,7 +264,7 @@ public class PlayScreen extends ScreenAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         int height = state.getBlocksPlaced();
-        background.draw(colors.backgroundBottom(height), colors.backgroundTop(height));
+        background.draw(colors.backgroundBottom(height), colors.backgroundTop(height), cameraRig.centerY());
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);

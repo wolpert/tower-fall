@@ -74,4 +74,9 @@ public class CameraRig {
     public float viewBottom() {
         return positionY - Tunables.WORLD_HEIGHT / 2f;
     }
+
+    /** Eased view-center height (no shake) — drives the background parallax scroll. */
+    public float centerY() {
+        return positionY;
+    }
 }
