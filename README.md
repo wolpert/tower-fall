@@ -19,6 +19,10 @@ One action — **drop** — mapped to all of:
 
 Tap to start on the title screen; tap to retry on game over.
 
+On the title screen, tap the **Sound: On/Off** and **View: Flat/Iso** lines to toggle them
+(they persist). On desktop, **M** toggles sound and **V** toggles the view; **M** also mutes
+mid-game.
+
 ## Gameplay
 
 - **Score** is the number of blocks you place (your height), plus a bonus on perfect
@@ -28,6 +32,9 @@ Tap to start on the title screen; tap to retry on game over.
 - A **partial** placement shears off the overhang and narrows the tower.
 - A **miss** (no overlap at all) ends the run.
 - Speed ramps with height, up to a ceiling. The best score is saved locally.
+
+An optional **isometric view** renders the same game as a 3D block skin, and a subtle
+**parallax** skyline drifts behind the tower as you climb.
 
 ## Tech
 
@@ -92,11 +99,11 @@ Inside `core` (package `com.codeheadsystems.towerstack`):
 | `config`    | `Tunables` — every gameplay-feel constant in one place                       |
 | `model`     | Pure, libGDX-free game logic: `Block`, `Tower`, `SliceMath`, `DropResult`, `GameState` |
 | `screens`   | `TitleScreen`, `PlayScreen` (play + game-over phase)                          |
-| `render`    | `BackgroundRenderer`, `TowerRenderer`                                         |
+| `render`    | `BackgroundRenderer` (gradient + parallax); `BlockRenderer` with `FlatBlockRenderer` / `IsoBlockRenderer` |
 | `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient` |
 | `audio`     | `ToneSynth` (synthesis + WAV encoding), `GameAudio` (the four sound effects)  |
 | `ui`        | `TextRenderer`, `ScreenFade`                                                  |
-| `util`      | `ScoreStore` (local best-score persistence)                                  |
+| `util`      | `ScoreStore` (best score), `Settings` (sound + view options)                  |
 
 ### Tuning
 
