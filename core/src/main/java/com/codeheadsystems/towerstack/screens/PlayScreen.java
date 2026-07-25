@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -54,11 +55,25 @@ public class PlayScreen extends ScreenAdapter {
     private final Viewport viewport;
     private final ShapeRenderer shapes;
 
-    // Renderers.
+    // Renderers. Both block renderers exist; blockRenderer points at the active one so the
+    // view can be swapped live (e.g. from the game-over screen).
     private final BackgroundRenderer background;
-    private final BlockRenderer blockRenderer;
+    private final BlockRenderer flatRenderer = new FlatBlockRenderer();
+    private final BlockRenderer isoRenderer = new IsoBlockRenderer();
+    private BlockRenderer blockRenderer;
     private final TextRenderer text;
     private final ScreenFade fade;
+
+    // Tappable game-over toggles (world coordinates), mirroring the title screen.
+    private final Rectangle soundToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.325f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
+    private final Rectangle viewToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.255f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
+    private final Rectangle difficultyToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.185f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
 
     // Scratch for mapping game points into render space when spawning effects.
     private final Vector2 renderPoint = new Vector2();
@@ -89,7 +104,7 @@ public class PlayScreen extends ScreenAdapter {
 
         this.settings = new Settings();
         this.background = new BackgroundRenderer();
-        this.blockRenderer = settings.isIsometric() ? new IsoBlockRenderer() : new FlatBlockRenderer();
+        this.blockRenderer = settings.isIsometric() ? isoRenderer : flatRenderer;
         this.text = new TextRenderer();
         this.fade = new ScreenFade();
 
@@ -114,6 +129,7 @@ public class PlayScreen extends ScreenAdapter {
 
     /** Reset everything for a fresh run: base block, first moving block, camera, effects. */
     private void startRun() {
+        state.setDifficulty(settings.difficulty()); // apply the chosen difficulty to this run
         state.reset();
         tower.clear();
         debris.clear();
@@ -146,10 +162,7 @@ public class PlayScreen extends ScreenAdapter {
     }
 
     private void update(float delta) {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
-            settings.toggleSound();
-            audio.setMuted(!settings.isSoundEnabled());
-        }
+        handleOptionKeys();
 
         if (state.isPlaying()) {
             if (dropRequested()) {
@@ -157,8 +170,8 @@ public class PlayScreen extends ScreenAdapter {
             } else {
                 moveBlock(delta);
             }
-        } else if (dropRequested()) {
-            startRun();
+        } else {
+            handleGameOverInput();
         }
 
         // Effects advance every frame, whatever the phase, so debris keeps falling and the
@@ -174,6 +187,53 @@ public class PlayScreen extends ScreenAdapter {
     /** All three inputs — tap, left-click, spacebar — collapse to one "drop" action. */
     private boolean dropRequested() {
         return Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+    }
+
+    /** Desktop shortcuts that work in any phase: M sound, V view, D difficulty. */
+    private void handleOptionKeys() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            settings.toggleSound();
+            applySound();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.V)) {
+            settings.toggleIsometric();
+            applyView();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+            settings.cycleDifficulty();
+        }
+    }
+
+    /** On game over: a tap on a toggle changes it; a tap anywhere else retries. */
+    private void handleGameOverInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            startRun();
+            return;
+        }
+        if (!Gdx.input.justTouched()) {
+            return;
+        }
+        Vector2 world = text.unproject(Gdx.input.getX(), Gdx.input.getY());
+        if (soundToggle.contains(world.x, world.y)) {
+            settings.toggleSound();
+            applySound();
+        } else if (viewToggle.contains(world.x, world.y)) {
+            settings.toggleIsometric();
+            applyView();
+        } else if (difficultyToggle.contains(world.x, world.y)) {
+            settings.cycleDifficulty();
+        } else {
+            startRun();
+        }
+    }
+
+    private void applySound() {
+        audio.setMuted(!settings.isSoundEnabled());
+    }
+
+    /** Point the active renderer at the current view; swaps the frozen tower live on game over. */
+    private void applyView() {
+        blockRenderer = settings.isIsometric() ? isoRenderer : flatRenderer;
     }
 
     /**
@@ -206,7 +266,7 @@ public class PlayScreen extends ScreenAdapter {
         DropResult result = SliceMath.slice(
                 moving.getLeft(), moving.getWidth(),
                 top.getLeft(), top.getWidth(),
-                Tunables.PERFECT_TOLERANCE);
+                state.getDifficulty().getPerfectTolerance());
 
         if (result.isMiss()) {
             handleMiss(top);
@@ -262,12 +322,21 @@ public class PlayScreen extends ScreenAdapter {
         return new Block(left, moving.getBottom(), width, Tunables.BLOCK_HEIGHT, moving.getColor());
     }
 
-    /** A partial placement narrows the tower to the surviving overlap. */
+    /**
+     * A partial placement narrows the tower to the surviving overlap — but not below the
+     * difficulty's minimum-width floor (Easy), keeping runs recoverable. The floored block
+     * stays centered on the overlap.
+     */
     private Block buildSlicedBlock(DropResult result) {
-        return new Block(
-                result.getSurvivingLeft(), moving.getBottom(),
-                result.getSurvivingWidth(), Tunables.BLOCK_HEIGHT,
-                moving.getColor());
+        float left = result.getSurvivingLeft();
+        float width = result.getSurvivingWidth();
+        float minWidth = state.getDifficulty().getMinWidth();
+        if (minWidth > 0f && width < minWidth) {
+            float center = left + width / 2f;
+            width = minWidth;
+            left = center - width / 2f;
+        }
+        return new Block(left, moving.getBottom(), width, Tunables.BLOCK_HEIGHT, moving.getColor());
     }
 
     private void draw() {
@@ -299,14 +368,7 @@ public class PlayScreen extends ScreenAdapter {
     private void drawHud() {
         text.begin();
         if (state.isGameOver()) {
-            text.drawCentered("GAME OVER", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 1.8f);
-            text.drawCentered("Score  " + state.getScore(), Tunables.WORLD_HEIGHT * 0.53f, Color.WHITE, 1.2f);
-            if (newBest) {
-                text.drawCentered("New Best!", Tunables.WORLD_HEIGHT * 0.46f, Color.GOLD, 1.2f);
-            } else {
-                text.drawCentered("Best  " + scoreStore.best(), Tunables.WORLD_HEIGHT * 0.46f, Color.LIGHT_GRAY, 1.2f);
-            }
-            text.drawCentered("tap to retry", Tunables.WORLD_HEIGHT * 0.38f, Color.LIGHT_GRAY, 1.1f);
+            drawGameOverHud();
         } else {
             text.drawCentered(Integer.toString(state.getScore()), Tunables.WORLD_HEIGHT * 0.90f, Color.WHITE, 1.8f);
             if (state.getCombo() >= 2) {
@@ -314,6 +376,25 @@ public class PlayScreen extends ScreenAdapter {
             }
         }
         text.end();
+    }
+
+    private void drawGameOverHud() {
+        text.drawCentered("GAME OVER", Tunables.WORLD_HEIGHT * 0.66f, Color.WHITE, 1.8f);
+        text.drawCentered("Score  " + state.getScore(), Tunables.WORLD_HEIGHT * 0.585f, Color.WHITE, 1.2f);
+        if (newBest) {
+            text.drawCentered("New Best!", Tunables.WORLD_HEIGHT * 0.525f, Color.GOLD, 1.2f);
+        } else {
+            text.drawCentered("Best  " + scoreStore.best(), Tunables.WORLD_HEIGHT * 0.525f, Color.LIGHT_GRAY, 1.2f);
+        }
+        text.drawCentered("tap to retry", Tunables.WORLD_HEIGHT * 0.455f, Color.LIGHT_GRAY, 1.1f);
+
+        // Tappable option toggles (same regions as soundToggle / viewToggle / difficultyToggle).
+        text.drawCentered("Sound:  " + (settings.isSoundEnabled() ? "On" : "Off"),
+                Tunables.WORLD_HEIGHT * 0.350f, Color.LIGHT_GRAY, 1.0f);
+        text.drawCentered("View:  " + (settings.isIsometric() ? "Iso" : "Flat"),
+                Tunables.WORLD_HEIGHT * 0.280f, Color.LIGHT_GRAY, 1.0f);
+        text.drawCentered("Difficulty:  " + settings.difficulty().getLabel(),
+                Tunables.WORLD_HEIGHT * 0.210f, Color.LIGHT_GRAY, 1.0f);
     }
 
     @Override

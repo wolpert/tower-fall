@@ -1,5 +1,6 @@
 package com.codeheadsystems.towerstack.model;
 
+import com.codeheadsystems.towerstack.config.Difficulty;
 import com.codeheadsystems.towerstack.config.Tunables;
 
 /**
@@ -21,9 +22,19 @@ public class GameState {
     private int score;
     private int combo;
     private float currentWidth;
+    private Difficulty difficulty = Difficulty.NORMAL;
 
     public GameState() {
         reset();
+    }
+
+    /** Set the difficulty for the next run (apply before {@link #reset()} / a fresh run). */
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public Difficulty getDifficulty() {
+        return difficulty;
     }
 
     /** Begin a fresh run. */
@@ -90,7 +101,8 @@ public class GameState {
 
     /** Current horizontal speed of the moving block, ramping with height to a ceiling. */
     public float currentSpeed() {
-        float speed = Tunables.BASE_SPEED + Tunables.HEIGHT_FACTOR * blocksPlaced;
-        return Math.min(speed, Tunables.SPEED_CEILING);
+        float scale = difficulty.getSpeedScale();
+        float speed = (Tunables.BASE_SPEED + Tunables.HEIGHT_FACTOR * blocksPlaced) * scale;
+        return Math.min(speed, Tunables.SPEED_CEILING * scale);
     }
 }
