@@ -9,9 +9,14 @@ windows on the near layer) plus a **star field** that fades in with height and t
 run carries you from the city up into space. See `render/BackgroundRenderer` and the
 `CITY_*` / `STAR_*` / `WINDOW_*` constants in `Tunables`.
 
+Added since: a slow-drifting **moon** (glow + craters) that hangs over the city and among the
+stars, and **occasional shooting stars** that streak across once you've climbed into star
+territory. See `drawMoon` / `updateShootingStars` / `drawShootingStars` and the `MOON_*` /
+`SHOOTING_STAR_*` constants.
+
 Remaining nice-to-haves if we want more later:
 
-- A slow-drifting **moon or planet**, and the occasional **shooting star**.
+- A distant **planet** (variant of the moon), or moon phases.
 - Soften/blur the far layer for more depth.
 - Tune window density/brightness (currently fairly busy — `WINDOW_ALPHA`, the 0.45 lit chance).
 

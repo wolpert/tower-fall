@@ -166,6 +166,23 @@ public final class Tunables {
     public static final float STAR_TWINKLE_SPEED = 2.5f;
     public static final float STAR_SIZE = 3f;
 
+    // Moon: always in the sky (over the city, and among the stars up high), drifting slowly.
+    public static final float MOON_RADIUS = 32f;
+    public static final float MOON_START_X = WORLD_WIDTH * 0.70f;
+    public static final float MOON_Y = WORLD_HEIGHT * 0.84f;
+    public static final float MOON_DRIFT_SPEED = 2.5f; // horizontal world units/sec
+    public static final float MOON_VFACTOR = 0.05f;    // very slight recede with height
+    public static final float MOON_GLOW_ALPHA = 0.10f;
+
+    // Shooting stars: occasional streaks, more likely once you've climbed into star territory.
+    public static final float SHOOTING_STAR_MIN_INTERVAL = 3.5f;
+    public static final float SHOOTING_STAR_MAX_INTERVAL = 9f;
+    public static final float SHOOTING_STAR_SPEED = 850f;
+    public static final float SHOOTING_STAR_LENGTH = 90f;
+    public static final float SHOOTING_STAR_LIFE = 0.65f;
+    public static final float SHOOTING_STAR_WIDTH = 3f;
+    public static final float SHOOTING_STAR_MIN_VISIBILITY = 0.3f;
+
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
 

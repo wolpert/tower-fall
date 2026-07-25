@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -61,6 +63,25 @@ public class BackgroundRenderer implements Disposable {
         }
     }
 
+    /** A transient streak across the sky. */
+    private static final class ShootingStar {
+        float x;
+        float y;
+        final float velocityX;
+        final float velocityY;
+        float life;
+        final float maxLife;
+
+        ShootingStar(float x, float y, float velocityX, float velocityY, float life) {
+            this.x = x;
+            this.y = y;
+            this.velocityX = velocityX;
+            this.velocityY = velocityY;
+            this.life = life;
+            this.maxLife = life;
+        }
+    }
+
     private final ShapeRenderer shapes;
     private final OrthographicCamera camera;
     private final Viewport viewport;
@@ -69,6 +90,13 @@ public class BackgroundRenderer implements Disposable {
     private final Building[] nearCity;
     private final Star[] stars;
     private final Color tint = new Color();
+    private final Color streakHead = new Color();
+    private final Color streakTail = new Color();
+
+    // Shooting-star state, advanced from the running clock passed to draw().
+    private final Array<ShootingStar> shootingStars = new Array<>();
+    private float nextShootingStar;
+    private float lastTime;
 
     public BackgroundRenderer() {
         this.shapes = new ShapeRenderer();
@@ -80,6 +108,8 @@ public class BackgroundRenderer implements Disposable {
         this.farCity = buildCity(random, 40f, 90f, 80f, 220f, false);
         this.nearCity = buildCity(random, 55f, 120f, 130f, 340f, true);
         this.stars = buildStars(random);
+        this.nextShootingStar = MathUtils.random(
+                Tunables.SHOOTING_STAR_MIN_INTERVAL, Tunables.SHOOTING_STAR_MAX_INTERVAL);
     }
 
     private Building[] buildCity(Random random, float minWidth, float maxWidth,
@@ -157,19 +187,114 @@ public class BackgroundRenderer implements Disposable {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
+        // Frame delta from the running clock (clamped so a pause/first frame can't jump).
+        float delta = Math.max(0f, Math.min(0.1f, time - lastTime));
+        lastTime = time;
+
+        float starVisibility = starVisibility(cameraY);
+        updateShootingStars(delta, starVisibility, time);
+
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
 
         // Gradient: rect(x, y, w, h, bottomLeft, bottomRight, topRight, topLeft).
         shapes.rect(0f, 0f, Tunables.WORLD_WIDTH, Tunables.WORLD_HEIGHT, bottom, bottom, top, top);
 
-        drawStars(cameraY, time);
+        drawStars(starVisibility, cameraY, time);
+        drawMoon(time, cameraY);
+        drawShootingStars(starVisibility);
         drawCity(farCity, silhouette, Tunables.CITY_FAR_HFACTOR, Tunables.CITY_FAR_VFACTOR,
                 Tunables.CITY_FAR_ALPHA, Tunables.CITY_FAR_BRIGHTNESS, horizontalDrift, cameraY);
         drawCity(nearCity, silhouette, Tunables.CITY_NEAR_HFACTOR, Tunables.CITY_NEAR_VFACTOR,
                 Tunables.CITY_NEAR_ALPHA, Tunables.CITY_NEAR_BRIGHTNESS, horizontalDrift, cameraY);
 
         shapes.end();
+    }
+
+    private float starVisibility(float cameraY) {
+        float v = (cameraY - Tunables.STAR_FADE_START) / Tunables.STAR_FADE_RANGE;
+        return Math.max(0f, Math.min(1f, v)) * Tunables.STAR_MAX_ALPHA;
+    }
+
+    /** A pale glowing disc that drifts slowly across the sky and barely recedes with height. */
+    private void drawMoon(float time, float cameraY) {
+        float span = Tunables.WORLD_WIDTH + 2f * Tunables.MOON_RADIUS;
+        float x = (Tunables.MOON_START_X + time * Tunables.MOON_DRIFT_SPEED + Tunables.MOON_RADIUS) % span;
+        if (x < 0f) {
+            x += span;
+        }
+        x -= Tunables.MOON_RADIUS;
+        float y = Tunables.MOON_Y - cameraY * Tunables.MOON_VFACTOR;
+        float r = Tunables.MOON_RADIUS;
+
+        shapes.setColor(0.90f, 0.93f, 0.80f, Tunables.MOON_GLOW_ALPHA);
+        shapes.circle(x, y, r * 1.9f, 48);
+        shapes.setColor(0.93f, 0.94f, 0.84f, 1f);
+        shapes.circle(x, y, r, 48);
+        // A few faint craters for character.
+        shapes.setColor(0.85f, 0.86f, 0.76f, 1f);
+        shapes.circle(x - r * 0.30f, y + r * 0.28f, r * 0.18f, 16);
+        shapes.circle(x + r * 0.34f, y - r * 0.12f, r * 0.12f, 16);
+        shapes.circle(x + r * 0.06f, y + r * 0.40f, r * 0.10f, 16);
+    }
+
+    private void updateShootingStars(float delta, float visibility, float time) {
+        if (time >= nextShootingStar) {
+            if (visibility >= Tunables.SHOOTING_STAR_MIN_VISIBILITY) {
+                spawnShootingStar();
+            }
+            nextShootingStar = time + MathUtils.random(
+                    Tunables.SHOOTING_STAR_MIN_INTERVAL, Tunables.SHOOTING_STAR_MAX_INTERVAL);
+        }
+        for (int i = shootingStars.size - 1; i >= 0; i--) {
+            ShootingStar s = shootingStars.get(i);
+            s.x += s.velocityX * delta;
+            s.y += s.velocityY * delta;
+            s.life -= delta;
+            if (s.life <= 0f) {
+                shootingStars.removeIndex(i);
+            }
+        }
+    }
+
+    private void spawnShootingStar() {
+        float x = MathUtils.random(0.1f, 0.9f) * Tunables.WORLD_WIDTH;
+        float y = MathUtils.random(0.55f, 0.95f) * Tunables.WORLD_HEIGHT;
+        // Streak diagonally downward, either to the left or the right.
+        float angle = MathUtils.randomBoolean()
+                ? MathUtils.random(200f, 235f)
+                : MathUtils.random(305f, 340f);
+        float vx = MathUtils.cosDeg(angle) * Tunables.SHOOTING_STAR_SPEED;
+        float vy = MathUtils.sinDeg(angle) * Tunables.SHOOTING_STAR_SPEED;
+        shootingStars.add(new ShootingStar(x, y, vx, vy, Tunables.SHOOTING_STAR_LIFE));
+    }
+
+    private void drawShootingStars(float visibility) {
+        if (visibility <= 0.001f) {
+            return;
+        }
+        for (ShootingStar s : shootingStars) {
+            float speed = (float) Math.sqrt(s.velocityX * s.velocityX + s.velocityY * s.velocityY);
+            float dirX = s.velocityX / speed;
+            float dirY = s.velocityY / speed;
+            float tailX = s.x - dirX * Tunables.SHOOTING_STAR_LENGTH;
+            float tailY = s.y - dirY * Tunables.SHOOTING_STAR_LENGTH;
+            float perpX = -dirY * Tunables.SHOOTING_STAR_WIDTH / 2f;
+            float perpY = dirX * Tunables.SHOOTING_STAR_WIDTH / 2f;
+
+            float alpha = visibility * Math.min(1f, s.life / s.maxLife * 1.6f);
+            streakHead.set(1f, 1f, 1f, alpha);
+            streakTail.set(1f, 1f, 1f, 0f);
+
+            // A tapering, fading triangle from the bright head to the transparent tail.
+            shapes.triangle(
+                    s.x + perpX, s.y + perpY,
+                    s.x - perpX, s.y - perpY,
+                    tailX, tailY,
+                    streakHead, streakHead, streakTail);
+            shapes.setColor(streakHead);
+            shapes.circle(s.x, s.y, 2f, 8);
+        }
     }
 
     private void drawCity(Building[] buildings, Color silhouette, float hFactor, float vFactor,
@@ -212,9 +337,7 @@ public class BackgroundRenderer implements Disposable {
         }
     }
 
-    private void drawStars(float cameraY, float time) {
-        float visibility = (cameraY - Tunables.STAR_FADE_START) / Tunables.STAR_FADE_RANGE;
-        visibility = Math.max(0f, Math.min(1f, visibility)) * Tunables.STAR_MAX_ALPHA;
+    private void drawStars(float visibility, float cameraY, float time) {
         if (visibility <= 0.001f) {
             return;
         }
