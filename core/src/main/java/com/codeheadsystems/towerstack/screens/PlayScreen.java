@@ -79,6 +79,7 @@ public class PlayScreen extends ScreenAdapter {
     private Block moving;
     private int direction;
     private boolean newBest;
+    private float elapsed; // for star twinkle (horizontal city drift is frozen in a run)
 
     public PlayScreen(TowerStackGame game) {
         this.game = game;
@@ -167,6 +168,7 @@ public class PlayScreen extends ScreenAdapter {
         burst.update(delta);
         cameraRig.update(delta);
         fade.update(delta);
+        elapsed += delta;
     }
 
     /** All three inputs — tap, left-click, spacebar — collapse to one "drop" action. */
@@ -273,8 +275,9 @@ public class PlayScreen extends ScreenAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         int height = state.getBlocksPlaced();
+        // In a run: no horizontal drift; the city recedes and stars fade in with camera height.
         background.draw(colors.backgroundBottom(height), colors.backgroundTop(height),
-                colors.parallax(height), cameraRig.centerY());
+                colors.parallax(height), 0f, cameraRig.centerY(), elapsed);
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);

@@ -129,15 +129,42 @@ public final class Tunables {
     public static final float ISO_SHADE_SIDE = 0.62f;
 
     // --- Parallax background ----------------------------------------------
-    // Two layers of faint distant silhouettes that scroll down as the camera rises. Each
-    // layer moves at a fraction of the camera's speed (near faster than far) and repeats
-    // every PATTERN_HEIGHT world units.
+    // A two-layer city skyline plus a star field. On the title screen the city drifts
+    // horizontally (left); in a run the horizontal drift stops and the city recedes downward
+    // as the camera rises, while stars fade in with height (climbing into "space").
 
-    public static final float PARALLAX_PATTERN_HEIGHT = WORLD_HEIGHT * 1.4f;
-    public static final float PARALLAX_FAR_FACTOR = 0.12f;
-    public static final float PARALLAX_NEAR_FACTOR = 0.28f;
-    public static final float PARALLAX_FAR_ALPHA = 0.16f;
-    public static final float PARALLAX_NEAR_ALPHA = 0.26f;
+    /** How far apart the city tiles horizontally (wider than the screen so it wraps smoothly). */
+    public static final float CITY_PATTERN_WIDTH = WORLD_WIDTH * 1.6f;
+
+    /** World-y the buildings stand on at rest (near the bottom of the screen). */
+    public static final float CITY_BASELINE = WORLD_HEIGHT * 0.05f;
+
+    /** Base horizontal drift speed on the title (world units/sec), scaled per layer. */
+    public static final float CITY_DRIFT_SPEED = 14f;
+
+    // Per-layer parallax: horizontal drift factor, vertical (height) factor, alpha, brightness.
+    public static final float CITY_FAR_HFACTOR = 0.45f;
+    public static final float CITY_NEAR_HFACTOR = 1.0f;
+    public static final float CITY_FAR_VFACTOR = 0.10f;
+    public static final float CITY_NEAR_VFACTOR = 0.20f;
+    public static final float CITY_FAR_ALPHA = 0.18f;
+    public static final float CITY_NEAR_ALPHA = 0.30f;
+    public static final float CITY_FAR_BRIGHTNESS = 0.65f;
+    public static final float CITY_NEAR_BRIGHTNESS = 1.0f;
+
+    // Lit windows on the near buildings — a warm light, a touch brighter than the silhouette.
+    public static final float WINDOW_SIZE = 4f;
+    public static final float WINDOW_ALPHA = 0.55f;
+
+    // Star field: scattered points that fade in as the tower climbs and twinkle gently.
+    public static final int STAR_COUNT = 44;
+    public static final float STAR_PATTERN_HEIGHT = WORLD_HEIGHT;
+    public static final float STAR_FACTOR = 0.08f;      // very distant: barely scrolls
+    public static final float STAR_FADE_START = 300f;   // camera height before stars appear
+    public static final float STAR_FADE_RANGE = 1500f;  // height over which they reach full
+    public static final float STAR_MAX_ALPHA = 0.9f;
+    public static final float STAR_TWINKLE_SPEED = 2.5f;
+    public static final float STAR_SIZE = 3f;
 
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.

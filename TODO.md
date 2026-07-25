@@ -2,22 +2,18 @@
 
 Ideas and follow-ups, not yet scheduled. Each note points at where in the code it would land.
 
-## 1. Make the parallax more interesting
+## 1. Make the parallax more interesting — DONE (largely)
 
-Today it's two layers of plain rectangular silhouettes that scroll with height — it reads as
-"just blocks moving." Explore richer content:
+Replaced the plain bars with a two-layer **city skyline** (varied buildings with warm lit
+windows on the near layer) plus a **star field** that fades in with height and twinkles — so a
+run carries you from the city up into space. See `render/BackgroundRenderer` and the
+`CITY_*` / `STAR_*` / `WINDOW_*` constants in `Tunables`.
 
-- **Proper city skyline** — varied building shapes (setbacks, antennae, tiny lit windows),
-  grouped into a continuous silhouette rather than free-floating bars.
-- **Star field / astronomical** — twinkling stars, a slow-drifting moon or planet, the odd
-  shooting star. Pairs well with the dark palette.
-- **Height-driven transition** — skyline down low, stars/space up high, so climbing changes the
-  backdrop and reinforces progression.
-- **Depth cues** — more layers, soften/blur the far layer, a little horizontal drift.
+Remaining nice-to-haves if we want more later:
 
-_Where:_ `render/BackgroundRenderer` (`Bar` / `drawLayer`), `effects/ColorGradient.parallax`,
-`Tunables` parallax section. Consider a `ParallaxLayer` abstraction so a layer's *content*
-(bars vs. stars vs. objects) is pluggable.
+- A slow-drifting **moon or planet**, and the occasional **shooting star**.
+- Soften/blur the far layer for more depth.
+- Tune window density/brightness (currently fairly busy — `WINDOW_ALPHA`, the 0.45 lit chance).
 
 ## 2. Easier mode / difficulty options
 
@@ -45,16 +41,10 @@ reads settings once at construction.
 _Where:_ `screens/PlayScreen` (game-over input handling + HUD); reuse the tappable-toggle
 hit-testing pattern from `TitleScreen`.
 
-## 4. Animate the parallax on the title screen
+## 4. Animate the parallax on the title screen — DONE
 
-The parallax is drawn on the title but sits **static**, because nothing moves the camera there
-(`cameraY` is passed as 0).
-
-- Give the title a slow, continuous parallax drift so it feels alive.
-- Simplest: accumulate elapsed time and pass `elapsed * driftSpeed` as the `cameraY` argument to
-  `background.draw`.
-
-_Where:_ `screens/TitleScreen.draw` (and a small time accumulator in `render`).
+The title now drifts the city **horizontally** (left) via a time accumulator in
+`TitleScreen`; the drift stops in a run (`PlayScreen` passes 0), where height takes over.
 
 ## 5. More juice options
 

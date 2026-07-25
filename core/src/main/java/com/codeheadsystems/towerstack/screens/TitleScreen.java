@@ -34,6 +34,8 @@ public class TitleScreen extends ScreenAdapter {
     private final ScoreStore scoreStore;
     private final Settings settings;
 
+    private float elapsed; // drives the title's horizontal city drift and star twinkle
+
     // Tappable regions for the toggles, in world coordinates.
     private final Rectangle soundToggle = new Rectangle(
             Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.245f,
@@ -62,6 +64,7 @@ public class TitleScreen extends ScreenAdapter {
         if (handleInput()) {
             return; // a run started; our resources are torn down in hide()
         }
+        elapsed += delta;
         fade.update(delta);
         draw();
     }
@@ -102,7 +105,9 @@ public class TitleScreen extends ScreenAdapter {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        background.draw(colors.backgroundBottom(0), colors.backgroundTop(0), colors.parallax(0), 0f);
+        // Title: the city drifts horizontally; the camera is still (no height scroll, no stars).
+        background.draw(colors.backgroundBottom(0), colors.backgroundTop(0), colors.parallax(0),
+                elapsed * Tunables.CITY_DRIFT_SPEED, 0f, elapsed);
 
         text.begin();
         text.drawCentered("TOWER STACK", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 2.4f);
