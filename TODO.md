@@ -20,31 +20,39 @@ Remaining nice-to-haves if we want more later:
 - Soften/blur the far layer for more depth.
 - Tune window density/brightness (currently fairly busy — `WINDOW_ALPHA`, the 0.45 lit chance).
 
-## 2. Easier mode / difficulty options
+## 2. Easier mode / difficulty options — DONE
 
-Today there's a single curve: `BASE_SPEED + HEIGHT_FACTOR * blocksPlaced` capped at
-`SPEED_CEILING`, no width floor, fixed `PERFECT_TOLERANCE`.
+A `config/Difficulty` enum now carries the three knobs per level — speed scale, perfect
+tolerance, and an optional minimum-width floor:
 
-- Add an Easy/Normal (maybe Hard) setting: scale base speed / height factor, widen the perfect
-  tolerance, optionally re-introduce a small `minWidth` floor on Easy so runs stay recoverable.
-- Persist the choice in `Settings`; surface it as a title toggle alongside Sound/View.
-- Consider a gentle ramp-in (first few blocks slower) regardless of mode.
+| Level  | Speed scale | Perfect tolerance | Min width |
+| ------ | ----------- | ----------------- | --------- |
+| Easy   | 0.80        | 9                 | 40        |
+| Normal | 1.00        | 6                 | none      |
+| Hard   | 1.30        | 4                 | none      |
 
-_Where:_ `config/Tunables` (group the difficulty-driven values, e.g. a small enum/struct),
-`model/GameState.currentSpeed`, `util/Settings`, `screens/TitleScreen` toggle.
+`GameState.currentSpeed()` scales both the ramp and the ceiling by the level;
+`PlayScreen.dropBlock` reads the tolerance per drop, and `buildSlicedBlock` re-centers a
+too-thin slice on the Easy floor. The choice persists in `Settings` (`difficulty()` /
+`cycleDifficulty()`, falling back to Normal if a stored value no longer parses) and is applied
+to the run in `PlayScreen.startRun`, so a change mid-game-over takes effect on the next retry.
+It's a cycling toggle on the title screen and on game over, plus **D** on desktop.
 
-## 3. Change sound / view (and difficulty) from the game-over screen
+Remaining nice-to-have:
 
-Today settings only change on the title; game over just says "tap to retry," and `PlayScreen`
-reads settings once at construction.
+- A gentle ramp-in (first few blocks slower) regardless of mode — not implemented.
 
-- Add toggles to the game-over overlay (Sound / View), or a small "back to title" option.
-- Sound can already flip live (the `M` key does it). View is chosen at `PlayScreen`
-  construction, so switching mid-screen means swapping `blockRenderer` on toggle (a small factory
-  or just rebuild the two impls) — cleanest is to swap it immediately when toggled on game over.
+## 3. Change sound / view (and difficulty) from the game-over screen — DONE
 
-_Where:_ `screens/PlayScreen` (game-over input handling + HUD); reuse the tappable-toggle
-hit-testing pattern from `TitleScreen`.
+The game-over overlay now draws tappable **Sound / View / Difficulty** lines under "tap to
+retry," using the same rectangle hit-testing as `TitleScreen`; a tap that misses all three
+still retries, and space always retries. `PlayScreen` holds both block renderers and points
+`blockRenderer` at the active one, so toggling the view swaps the frozen tower live. **M** /
+**V** / **D** work in any phase on desktop.
+
+Remaining nice-to-have:
+
+- No "back to title" option — retry is still the only way out of game over.
 
 ## 4. Animate the parallax on the title screen — DONE
 

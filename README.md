@@ -19,9 +19,11 @@ One action — **drop** — mapped to all of:
 
 Tap to start on the title screen; tap to retry on game over.
 
-On the title screen, tap the **Sound: On/Off** and **View: Flat/Iso** lines to toggle them
-(they persist). On desktop, **M** toggles sound and **V** toggles the view; **M** also mutes
-mid-game.
+On the title screen — and on the game-over screen — tap the **Sound: On/Off**,
+**View: Flat/Iso**, and **Difficulty: Easy/Normal/Hard** lines to change them (they persist).
+Sound and view take effect immediately; a difficulty change applies to the next run. On
+desktop, **M** toggles sound, **V** toggles the view, and **D** cycles difficulty — all of
+them mid-game too.
 
 ## Gameplay
 
@@ -96,14 +98,14 @@ Inside `core` (package `com.codeheadsystems.towerstack`):
 
 | Package     | Contents                                                                     |
 |-------------|------------------------------------------------------------------------------|
-| `config`    | `Tunables` — every gameplay-feel constant in one place                       |
+| `config`    | `Tunables` — every gameplay-feel constant in one place; `Difficulty` — the Easy/Normal/Hard knobs |
 | `model`     | Pure, libGDX-free game logic: `Block`, `Tower`, `SliceMath`, `DropResult`, `GameState` |
 | `screens`   | `TitleScreen`, `PlayScreen` (play + game-over phase)                          |
 | `render`    | `BackgroundRenderer` (gradient + parallax); `BlockRenderer` with `FlatBlockRenderer` / `IsoBlockRenderer` |
 | `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient` |
 | `audio`     | `ToneSynth` (synthesis + WAV encoding), `GameAudio` (the four sound effects)  |
 | `ui`        | `TextRenderer`, `ScreenFade`                                                  |
-| `util`      | `ScoreStore` (best score), `Settings` (sound + view options)                  |
+| `util`      | `ScoreStore` (best score), `Settings` (sound, view, difficulty options)       |
 
 ### Tuning
 

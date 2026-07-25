@@ -48,8 +48,8 @@ public final class Tunables {
 
     // --- Perfect placement (rewarded starting in increment 3) -------------
 
-    /** Edge alignment within this many world units counts as a perfect placement. */
-    public static final float PERFECT_TOLERANCE = 6f;
+    // The edge-alignment tolerance that counts as a perfect lives in Difficulty, since it
+    // varies per level.
 
     /** Width regained on a perfect placement, capped at {@link #START_WIDTH}. */
     public static final float PERFECT_REGROWTH = 14f;
