@@ -81,6 +81,7 @@ One file, every desktop OS:
 ```bash
 ./gradlew :lwjgl3:dist         # lwjgl3/build/dist/tower-stack.jar   (~14 MB)
 ./gradlew :lwjgl3:executable   # lwjgl3/build/dist/tower-stack       (the same, self-running)
+./gradlew :lwjgl3:releaseZip   # lwjgl3/build/dist/tower-stack.zip   (both, plus a README)
 ```
 
 `dist` bundles the game and every dependency — including the native libraries for Linux
@@ -94,6 +95,13 @@ java -jar tower-stack.jar
 `executable` prepends a shell stub to that jar. Because a zip's index is read from the end of
 the file, the result is *both* a shell script and a valid jar — `./tower-stack` on Linux and
 macOS, `java -jar tower-stack` on Windows.
+
+`releaseZip` is the one to hand to a player: it packs both of those and a player-facing README
+(kept at [`lwjgl3/src/release/README.md`](lwjgl3/src/release/README.md)) into a
+`tower-stack/` folder inside the archive, preserving the executable bit so `./tower-stack`
+works straight out of the unzipped directory. Note that `distZip` and `distTar` are the
+`application` plugin's own tasks and bundle the *thin* jar with generated start scripts —
+a different thing entirely.
 
 The only requirement on the player's machine is **Java 17 or newer**. If you would rather they
 didn't need it, the jar is also the natural input to `jpackage`, which produces a native

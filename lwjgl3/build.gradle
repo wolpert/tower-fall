@@ -58,6 +58,30 @@ tasks.register('dist', Jar) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE // first one in wins; LICENSE files and such
 }
 
+// The player-facing README, kept as a real file under src/release rather than as a string in
+// this script so it can be read and edited like the document it is. Deliberately NOT src/dist,
+// which the `application` plugin would sweep into its own distZip — a different archive, whose
+// contents these instructions do not describe.
+// Declares the one file it writes rather than using a Copy task, whose output is its whole
+// destination directory — which `dist` and `executable` also write into, leaving Gradle unable
+// to order them.
+tasks.register('distReadme') {
+    group = 'distribution'
+    description = 'Copies the player-facing README alongside the distributable jar.'
+
+    def source = layout.projectDirectory.file('src/release/README.md')
+    def target = layout.buildDirectory.file('dist/README.md')
+    inputs.file(source)
+    outputs.file(target)
+
+    doLast {
+        def out = target.get().asFile
+        out.parentFile.mkdirs()
+        java.nio.file.Files.copy(source.asFile.toPath(), out.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 tasks.register('executable') {
     group = 'distribution'
     description = 'Wraps the distributable jar in a shell stub so it runs directly on Unix.'
@@ -83,5 +107,27 @@ exec java -jar "\$0" "\$@"
             jarFile.get().asFile.withInputStream { it.transferTo(out) }
         }
         target.setExecutable(true, false)
+    }
+}
+
+// Note: `distZip` and `distTar` belong to the `application` plugin and bundle the thin jar with
+// generated start scripts — a different thing entirely. This is the one to hand to a player.
+tasks.register('releaseZip', Zip) {
+    group = 'distribution'
+    description = 'Zips the README, the jar and the self-running executable for release.'
+
+    archiveFileName = "${distributionName}.zip"
+    destinationDirectory = layout.buildDirectory.dir('dist')
+
+    // Everything lands in a folder of its own, so unzipping never scatters files.
+    into(distributionName) {
+        from tasks.named('dist')
+        from tasks.named('distReadme')
+        from(tasks.named('executable')) {
+            // Zip does record the Unix mode, so `unzip` on Linux and macOS restores this and
+            // ./tower-stack works straight out of the archive. Windows ignores it and uses the
+            // jar, which needs no permission bit.
+            filePermissions { unix(0755) }
+        }
     }
 }
