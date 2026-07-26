@@ -57,7 +57,7 @@ It's cosmetic, so a change applies immediately — including mid-run.
 
 - **Language:** Java 17
 - **Framework:** [libGDX](https://libgdx.com/) 1.13.1
-- **Targets:** Linux desktop (LWJGL3) and Android
+- **Targets:** desktop (LWJGL3 — Linux, Windows, macOS) and Android
 - No networking, no accounts, no backend — local high score only.
 - No art or audio assets are shipped: blocks are solid rectangles, and the sound effects are
   synthesized procedurally at runtime.
@@ -72,11 +72,35 @@ Requires a JDK (17+). The Gradle wrapper (`./gradlew`) fetches everything else.
 ./gradlew :lwjgl3:run
 ```
 
-The window opens in portrait. To build a runnable jar:
+The window opens in portrait.
+
+### Shipping it
+
+One file, every desktop OS:
 
 ```bash
-./gradlew :lwjgl3:jar   # output under lwjgl3/build/libs/
+./gradlew :lwjgl3:dist         # lwjgl3/build/dist/tower-stack.jar   (~14 MB)
+./gradlew :lwjgl3:executable   # lwjgl3/build/dist/tower-stack       (the same, self-running)
 ```
+
+`dist` bundles the game and every dependency — including the native libraries for Linux
+(x64/arm32/arm64/riscv64), Windows (x64/x86) and macOS (x64/arm64) — into a single jar. LWJGL
+and libGDX each unpack the right one for the host at startup, so the same file runs anywhere:
+
+```bash
+java -jar tower-stack.jar
+```
+
+`executable` prepends a shell stub to that jar. Because a zip's index is read from the end of
+the file, the result is *both* a shell script and a valid jar — `./tower-stack` on Linux and
+macOS, `java -jar tower-stack` on Windows.
+
+The only requirement on the player's machine is **Java 17 or newer**. If you would rather they
+didn't need it, the jar is also the natural input to `jpackage`, which produces a native
+installer with a bundled runtime — but that has to be built on each OS, so it wants a CI matrix.
+
+On macOS the launcher relaunches itself once with `-XstartOnFirstThread`, which GLFW requires
+there; see `StartOnFirstThreadHelper`.
 
 ### Android
 

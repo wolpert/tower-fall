@@ -1,4 +1,5 @@
-// Linux/desktop launcher, built on the LWJGL3 backend.
+// Desktop launcher, built on the LWJGL3 backend. Also owns the distribution tasks: see
+// `dist` and `executable` at the bottom of this file.
 
 plugins {
     id 'application'
@@ -21,4 +22,66 @@ dependencies {
     implementation project(':core')
     implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+}
+
+// --- Distribution -------------------------------------------------------------------
+//
+// One file, every desktop OS. This works without any extra dependencies because the runtime
+// classpath already carries natives for all of them — Linux x64/arm32/arm64/riscv64, Windows
+// x64/x86, macOS x64/arm64 — and they never collide: LWJGL namespaces its natives by
+// `<os>/<arch>/`, and libGDX's sit at the jar root under distinct filenames. LWJGL and
+// gdx-jnigen-loader each pick the right one for the host at runtime and unpack it.
+//
+// Rolled by hand rather than with a shading plugin: the merge needs nothing clever (there are
+// no service files and no signed jars to deal with), so this keeps the build plugin-free and
+// buildable offline.
+
+def distributionName = 'tower-stack'
+
+tasks.register('dist', Jar) {
+    group = 'distribution'
+    description = 'Builds one self-contained jar that runs on Linux, Windows and macOS.'
+
+    archiveFileName = "${distributionName}.jar"
+    destinationDirectory = layout.buildDirectory.dir('dist')
+    manifest.attributes 'Main-Class': application.mainClass.get()
+
+    from sourceSets.main.output
+    from({ configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }) {
+        // Every dependency brings its own manifest, and the multi-release module-info files
+        // collide across the LWJGL native jars. None of it matters on the classpath.
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/versions/*/module-info.class'
+        exclude 'module-info.class'
+        exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE // first one in wins; LICENSE files and such
+}
+
+tasks.register('executable') {
+    group = 'distribution'
+    description = 'Wraps the distributable jar in a shell stub so it runs directly on Unix.'
+    dependsOn tasks.named('dist')
+
+    def jarFile = tasks.named('dist', Jar).flatMap { it.archiveFile }
+    def outputFile = layout.buildDirectory.file("dist/${distributionName}")
+    inputs.file(jarFile)
+    outputs.file(outputFile)
+
+    doLast {
+        // A zip's index is found from the end of the file, so a jar tolerates arbitrary bytes
+        // in front of it: the same file is a runnable shell script on Linux/macOS AND a valid
+        // jar for `java -jar` on Windows.
+        def stub = """\
+#!/bin/sh
+# Tower Stack — a shell stub prepended to the game's jar, so this one file is both.
+exec java -jar "\$0" "\$@"
+"""
+        def target = outputFile.get().asFile
+        target.withOutputStream { out ->
+            out.write(stub.getBytes('UTF-8'))
+            jarFile.get().asFile.withInputStream { it.transferTo(out) }
+        }
+        target.setExecutable(true, false)
+    }
 }
