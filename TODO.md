@@ -14,9 +14,20 @@ stars, and **occasional shooting stars** that streak across once you've climbed 
 territory. See `drawMoon` / `updateShootingStars` / `drawShootingStars` and the `MOON_*` /
 `SHOOTING_STAR_*` constants.
 
+Also added: a ringed **Saturn** (`drawSaturn` / `drawPlanet` / `drawRingHalf`, `SATURN_*`). It
+sits far above the frame at ground level and slides down into view as the camera rises —
+first peeking in around 17 blocks up, resolving by ~32, and parking at `SATURN_SETTLE_Y` so a
+very tall run doesn't drag it into the city. The globe is a banded disc (each belt a rect
+clipped to the disc's half-width at its edge, rotated to match the ring tilt) and the rings are
+tilted elliptical annuli drawn far-half → planet → near-half, which is what makes the ring pass
+behind the globe on one side and in front on the other.
+
+It is gated on the **Crushed and Ground** juice level (`BackgroundRenderer.setLevel`) — the only
+piece of the backdrop that is, since the rest is scenery rather than reaction.
+
 Remaining nice-to-haves if we want more later:
 
-- A distant **planet** (variant of the moon), or moon phases.
+- Moon phases.
 - Soften/blur the far layer for more depth.
 - Tune window density/brightness (currently fairly busy — `WINDOW_ALPHA`, the 0.45 lit chance).
 
@@ -113,6 +124,7 @@ scenery layers stay; they aren't reactions). **Store Bought** is the original §
 - **Milestone flare** — every `COMBO_MILESTONE` (5) perfects: an **ON FIRE xN** banner, a
   firework volley, confetti and an extra kick.
 - **A longer, hue-cycling motion trail**.
+- **Saturn** in the backdrop — see #1.
 
 The choice persists in `Settings` (`juice()` / `cycleJuice()`), is a fourth tappable line on the
 title and game-over screens, and is **J** on desktop. Unlike difficulty it applies live — it's

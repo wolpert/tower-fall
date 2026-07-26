@@ -328,6 +328,7 @@ public class PlayScreen extends ScreenAdapter {
         hitStop.setLevel(juice);
         popups.setLevel(juice);
         flash.setLevel(juice);
+        background.setLevel(juice); // gates Saturn
         fireworks.setLevel(juice);
         confetti.setLevel(juice);
         audio.setLevel(juice);

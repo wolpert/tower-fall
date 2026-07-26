@@ -78,6 +78,7 @@ public class TitleScreen extends ScreenAdapter {
         fade.update(delta);
         // At Crushed and Ground the idle screen puts on its own show, so picking the level
         // tells you what you are in for before you start.
+        background.setLevel(settings.juice());
         fireworks.setLevel(settings.juice());
         fireworks.ambient(delta);
         fireworks.update(delta);

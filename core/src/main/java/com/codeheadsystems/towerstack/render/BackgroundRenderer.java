@@ -10,13 +10,15 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.codeheadsystems.towerstack.config.JuiceLevel;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.Fireworks;
 import java.util.Random;
 
 /**
  * The living backdrop (build brief §6/§7 and TODO #1/#4): a vertical gradient, a two-layer city
- * skyline, and a star field.
+ * skyline, a star field, and a drifting moon — plus, at the top juice level only, a ringed
+ * Saturn that slides into the sky once you have climbed for it.
  *
  * <ul>
  *   <li><b>Title</b> — the city drifts horizontally (left) while the camera sits still, so the
@@ -99,6 +101,9 @@ public class BackgroundRenderer implements Disposable {
     private float nextShootingStar;
     private float lastTime;
 
+    // The base scenery is always drawn; only Saturn is a juice-level reward.
+    private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
+
     public BackgroundRenderer() {
         this.shapes = new ShapeRenderer();
         this.camera = new OrthographicCamera();
@@ -177,6 +182,11 @@ public class BackgroundRenderer implements Disposable {
         viewport.update(width, height, true);
     }
 
+    /** Saturn is reserved for Crushed and Ground; the rest of the backdrop ignores this. */
+    public void setLevel(JuiceLevel level) {
+        this.level = level;
+    }
+
     /**
      * @param silhouette      base color for the buildings (tracks the palette)
      * @param horizontalDrift how far the city has drifted (advances on the title, 0 in a run)
@@ -204,6 +214,7 @@ public class BackgroundRenderer implements Disposable {
         shapes.rect(0f, 0f, Tunables.WORLD_WIDTH, Tunables.WORLD_HEIGHT, bottom, bottom, top, top);
 
         drawStars(starVisibility, cameraY, time);
+        drawSaturn(time, cameraY);
         drawMoon(time, cameraY);
         drawShootingStars(starVisibility);
         if (fireworks != null) {
@@ -242,6 +253,131 @@ public class BackgroundRenderer implements Disposable {
         shapes.circle(x - r * 0.30f, y + r * 0.28f, r * 0.18f, 16);
         shapes.circle(x + r * 0.34f, y - r * 0.12f, r * 0.12f, 16);
         shapes.circle(x + r * 0.06f, y + r * 0.40f, r * 0.10f, 16);
+    }
+
+    /**
+     * A ringed Saturn, the payoff for a tall run: it hangs far above the frame at ground level
+     * and slides down into view as the camera climbs, brightening as it comes, then parks at
+     * {@link Tunables#SATURN_SETTLE_Y}.
+     *
+     * <p>Drawn far half of the rings → planet → near half, which is what makes the ring pass
+     * behind the globe on one side and in front on the other.
+     *
+     * <p>Crushed and Ground only — at the lower levels the sky keeps its moon and stars.
+     */
+    private void drawSaturn(float time, float cameraY) {
+        if (!level.isOverTheTop()) {
+            return;
+        }
+        float visibility = saturnVisibility(cameraY);
+        if (visibility <= 0.001f) {
+            return;
+        }
+
+        float radius = Tunables.SATURN_RADIUS;
+        float reach = radius * Tunables.SATURN_RING_OUTER;
+        float y = Math.max(Tunables.SATURN_SETTLE_Y,
+                Tunables.SATURN_BASE_Y - cameraY * Tunables.SATURN_VFACTOR);
+        if (y - reach > Tunables.WORLD_HEIGHT) {
+            return; // still entirely above the frame
+        }
+
+        // Same slow horizontal wrap as the moon, at a further-away speed.
+        float span = Tunables.WORLD_WIDTH + 2f * reach;
+        float x = (Tunables.SATURN_START_X + time * Tunables.SATURN_DRIFT_SPEED + reach) % span;
+        if (x < 0f) {
+            x += span;
+        }
+        x -= reach;
+
+        tint.set(0.92f, 0.86f, 0.70f, visibility * Tunables.SATURN_GLOW_ALPHA);
+        shapes.setColor(tint);
+        shapes.circle(x, y, radius * 1.6f, 32);
+
+        drawRingHalf(x, y, radius * Tunables.SATURN_RING_INNER, radius * Tunables.SATURN_RING_MID,
+                true, 0.78f, visibility);
+        drawRingHalf(x, y, radius * Tunables.SATURN_RING_GAP, radius * Tunables.SATURN_RING_OUTER,
+                true, 0.55f, visibility);
+
+        drawPlanet(x, y, radius, visibility);
+
+        drawRingHalf(x, y, radius * Tunables.SATURN_RING_INNER, radius * Tunables.SATURN_RING_MID,
+                false, 0.95f, visibility);
+        drawRingHalf(x, y, radius * Tunables.SATURN_RING_GAP, radius * Tunables.SATURN_RING_OUTER,
+                false, 0.68f, visibility);
+    }
+
+    private float saturnVisibility(float cameraY) {
+        float v = (cameraY - Tunables.SATURN_FADE_START) / Tunables.SATURN_FADE_RANGE;
+        return Math.max(0f, Math.min(1f, v));
+    }
+
+    /** The globe: a pale disc with a few darker and lighter belts, tilted to match the rings. */
+    private void drawPlanet(float cx, float cy, float radius, float alpha) {
+        tint.set(0.86f, 0.77f, 0.56f, alpha);
+        shapes.setColor(tint);
+        shapes.circle(cx, cy, radius, 40);
+
+        // Band center and thickness as fractions of the radius, with a brightness factor.
+        float[] centers = {-0.58f, -0.22f, 0.16f, 0.52f};
+        float[] thickness = {0.14f, 0.13f, 0.15f, 0.11f};
+        float[] shades = {0.84f, 1.10f, 0.90f, 1.07f};
+
+        for (int i = 0; i < centers.length; i++) {
+            float bottom = (centers[i] - thickness[i] / 2f) * radius;
+            float top = (centers[i] + thickness[i] / 2f) * radius;
+            // Clip the belt to the disc: the half-width at whichever edge is nearer the pole.
+            float edge = Math.max(Math.abs(bottom), Math.abs(top));
+            float halfWidth = (float) Math.sqrt(Math.max(0f, radius * radius - edge * edge));
+            if (halfWidth <= 0f) {
+                continue;
+            }
+            tint.set(Math.min(1f, 0.86f * shades[i]), Math.min(1f, 0.77f * shades[i]),
+                    Math.min(1f, 0.56f * shades[i]), alpha);
+            shapes.setColor(tint);
+            // Rotated about the planet's center; a rect's farthest points are its corners, and
+            // those sit exactly on the circle, so the belt cannot spill outside it.
+            shapes.rect(cx - halfWidth, cy + bottom, halfWidth, -bottom,
+                    halfWidth * 2f, top - bottom, 1f, 1f, Tunables.SATURN_RING_ANGLE);
+        }
+    }
+
+    /**
+     * One half of a ring, as a tilted elliptical annulus built from quads.
+     *
+     * @param back true for the far half (drawn before the planet), false for the near half
+     */
+    private void drawRingHalf(float cx, float cy, float inner, float outer,
+                              boolean back, float brightness, float alpha) {
+        tint.set(Math.min(1f, 0.84f * brightness), Math.min(1f, 0.78f * brightness),
+                Math.min(1f, 0.64f * brightness), alpha);
+        shapes.setColor(tint);
+
+        float cosA = MathUtils.cosDeg(Tunables.SATURN_RING_ANGLE);
+        float sinA = MathUtils.sinDeg(Tunables.SATURN_RING_ANGLE);
+        float start = back ? 0f : MathUtils.PI;
+        float step = MathUtils.PI / Tunables.SATURN_RING_SEGMENTS;
+
+        for (int i = 0; i < Tunables.SATURN_RING_SEGMENTS; i++) {
+            float a0 = start + i * step;
+            float a1 = a0 + step;
+            float c0 = MathUtils.cos(a0);
+            float s0 = MathUtils.sin(a0) * Tunables.SATURN_RING_TILT;
+            float c1 = MathUtils.cos(a1);
+            float s1 = MathUtils.sin(a1) * Tunables.SATURN_RING_TILT;
+
+            float i0x = cx + c0 * inner * cosA - s0 * inner * sinA;
+            float i0y = cy + c0 * inner * sinA + s0 * inner * cosA;
+            float i1x = cx + c1 * inner * cosA - s1 * inner * sinA;
+            float i1y = cy + c1 * inner * sinA + s1 * inner * cosA;
+            float o0x = cx + c0 * outer * cosA - s0 * outer * sinA;
+            float o0y = cy + c0 * outer * sinA + s0 * outer * cosA;
+            float o1x = cx + c1 * outer * cosA - s1 * outer * sinA;
+            float o1y = cy + c1 * outer * sinA + s1 * outer * cosA;
+
+            shapes.triangle(i0x, i0y, i1x, i1y, o1x, o1y);
+            shapes.triangle(i0x, i0y, o1x, o1y, o0x, o0y);
+        }
     }
 
     private void updateShootingStars(float delta, float visibility, float time) {

@@ -174,6 +174,38 @@ public final class Tunables {
     public static final float MOON_VFACTOR = 0.05f;    // very slight recede with height
     public static final float MOON_GLOW_ALPHA = 0.10f;
 
+    // Saturn: a ringed planet that belongs to the top of the climb. It sits far above the frame
+    // at ground level and slides down into view as the camera rises, then parks — so it is a
+    // reward for height rather than scenery that is always there.
+
+    public static final float SATURN_RADIUS = 42f;
+    public static final float SATURN_START_X = WORLD_WIDTH * 0.26f;
+    public static final float SATURN_DRIFT_SPEED = 1.2f; // slower than the moon: further away
+
+    /** Screen-space height at camera zero — well above the top edge, so it starts unseen. */
+    public static final float SATURN_BASE_Y = 1010f;
+
+    /** How fast it descends per unit of camera height (it first peeks in around y≈700). */
+    public static final float SATURN_VFACTOR = 0.16f;
+
+    /** Where the descent stops, so a very tall run doesn't drag it down into the city. */
+    public static final float SATURN_SETTLE_Y = WORLD_HEIGHT * 0.70f;
+
+    public static final float SATURN_FADE_START = 500f;  // camera height before it resolves
+    public static final float SATURN_FADE_RANGE = 900f;
+    public static final float SATURN_GLOW_ALPHA = 0.08f;
+
+    // Ring geometry, as multiples of the planet radius, with a gap between the two bands.
+    public static final float SATURN_RING_INNER = 1.32f;
+    public static final float SATURN_RING_MID = 1.60f;
+    public static final float SATURN_RING_GAP = 1.72f;
+    public static final float SATURN_RING_OUTER = 2.05f;
+
+    /** Vertical squash of the ring ellipse, and the tilt of the whole system, in degrees. */
+    public static final float SATURN_RING_TILT = 0.30f;
+    public static final float SATURN_RING_ANGLE = -14f;
+    public static final int SATURN_RING_SEGMENTS = 40;
+
     // Shooting stars: occasional streaks, more likely once you've climbed into star territory.
     public static final float SHOOTING_STAR_MIN_INTERVAL = 3.5f;
     public static final float SHOOTING_STAR_MAX_INTERVAL = 9f;
