@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.codeheadsystems.towerstack.TowerStackGame;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.ColorGradient;
+import com.codeheadsystems.towerstack.effects.Fireworks;
 import com.codeheadsystems.towerstack.render.BackgroundRenderer;
 import com.codeheadsystems.towerstack.ui.ScreenFade;
 import com.codeheadsystems.towerstack.ui.TextRenderer;
@@ -30,6 +31,7 @@ public class TitleScreen extends ScreenAdapter {
     private final TowerStackGame game;
     private final BackgroundRenderer background;
     private final ColorGradient colors;
+    private final Fireworks fireworks;
     private final TextRenderer text;
     private final ScreenFade fade;
     private final ScoreStore scoreStore;
@@ -55,6 +57,7 @@ public class TitleScreen extends ScreenAdapter {
         this.game = game;
         this.background = new BackgroundRenderer();
         this.colors = new ColorGradient();
+        this.fireworks = new Fireworks();
         this.text = new TextRenderer();
         this.fade = new ScreenFade();
         this.scoreStore = new ScoreStore();
@@ -73,6 +76,11 @@ public class TitleScreen extends ScreenAdapter {
         }
         elapsed += delta;
         fade.update(delta);
+        // At Crushed and Ground the idle screen puts on its own show, so picking the level
+        // tells you what you are in for before you start.
+        fireworks.setLevel(settings.juice());
+        fireworks.ambient(delta);
+        fireworks.update(delta);
         draw();
     }
 
@@ -128,7 +136,7 @@ public class TitleScreen extends ScreenAdapter {
 
         // Title: the city drifts horizontally; the camera is still (no height scroll, no stars).
         background.draw(colors.backgroundBottom(0), colors.backgroundTop(0), colors.parallax(0),
-                elapsed * Tunables.CITY_DRIFT_SPEED, 0f, elapsed);
+                elapsed * Tunables.CITY_DRIFT_SPEED, 0f, elapsed, fireworks);
 
         text.begin();
         text.drawCentered("TOWER STACK", Tunables.WORLD_HEIGHT * 0.62f, Color.WHITE, 2.4f);

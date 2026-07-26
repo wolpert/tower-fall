@@ -16,6 +16,8 @@ import com.codeheadsystems.towerstack.config.Tunables;
  *       one on a miss, decaying quickly.</li>
  *   <li><b>Zoom punch</b> — a shove in on a perfect and a lurch out on a miss, easing back to
  *       rest (Freshly Squeezed only).</li>
+ *   <li><b>Roll punch</b> — the whole view tips a few degrees on an impact and rocks back
+ *       upright (Crushed and Ground only).</li>
  * </ul>
  *
  * <p>The eased base position is tracked separately from the camera's actual position so the
@@ -30,6 +32,7 @@ public class CameraRig {
     private float targetY;
     private float trauma;     // 0..1, decays over time
     private float zoomOffset; // additive on the camera's 1.0 rest zoom, decays to 0
+    private float roll;       // degrees off upright, decays to 0
 
     private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
 
@@ -43,6 +46,9 @@ public class CameraRig {
         this.level = level;
         if (!level.hasExtras()) {
             zoomOffset = 0f;
+        }
+        if (!level.isOverTheTop()) {
+            roll = 0f;
         }
         if (!level.isOn()) {
             trauma = 0f;
@@ -59,6 +65,7 @@ public class CameraRig {
         positionY = targetY;
         trauma = 0f;
         zoomOffset = 0f;
+        roll = 0f;
         apply(0f, 0f);
     }
 
@@ -81,7 +88,19 @@ public class CameraRig {
         zoomOffset += amount * level.getIntensity();
     }
 
-    /** Ease toward the target height and apply decaying shake and zoom. Frame-rate-independent. */
+    /**
+     * Tip the view. Degrees, signed; rocks back upright at {@link Tunables#ROLL_RECOVER_RATE}.
+     * The backdrop deliberately does not roll with it — the tower tipping against a level sky
+     * is what sells the impact.
+     */
+    public void rollPunch(float degrees) {
+        if (!level.isOverTheTop()) {
+            return;
+        }
+        roll += degrees * level.getIntensity();
+    }
+
+    /** Ease toward the target height and apply decaying shake, zoom and roll. */
     public void update(float delta) {
         float alpha = 1f - (float) Math.exp(-Tunables.CAMERA_RISE_RATE * delta);
         positionY += (targetY - positionY) * alpha;
@@ -93,11 +112,19 @@ public class CameraRig {
         float offsetY = shake * maxShake * MathUtils.random(-1f, 1f);
 
         zoomOffset *= (float) Math.exp(-Tunables.ZOOM_RECOVER_RATE * delta);
+        roll *= (float) Math.exp(-Tunables.ROLL_RECOVER_RATE * delta);
         apply(offsetX, offsetY);
     }
 
     private void apply(float offsetX, float offsetY) {
         camera.zoom = 1f + zoomOffset;
+        // Rebuild the orientation from scratch each frame so the roll is absolute, not a
+        // rotation that accumulates on top of the last one.
+        camera.up.set(0f, 1f, 0f);
+        camera.direction.set(0f, 0f, -1f);
+        if (roll != 0f) {
+            camera.rotate(roll);
+        }
         camera.position.set(centerX + offsetX, positionY + offsetY, 0f);
         camera.update();
     }

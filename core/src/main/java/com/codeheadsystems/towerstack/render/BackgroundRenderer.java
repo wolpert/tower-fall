@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.codeheadsystems.towerstack.config.Tunables;
+import com.codeheadsystems.towerstack.effects.Fireworks;
 import java.util.Random;
 
 /**
@@ -181,9 +182,11 @@ public class BackgroundRenderer implements Disposable {
      * @param horizontalDrift how far the city has drifted (advances on the title, 0 in a run)
      * @param cameraY         camera height — recedes the city and fades in the stars
      * @param time            seconds, for star twinkle
+     * @param fireworks       shells to draw in the sky, behind the skyline; may be null. The
+     *                        caller owns and updates them.
      */
     public void draw(Color bottom, Color top, Color silhouette,
-                     float horizontalDrift, float cameraY, float time) {
+                     float horizontalDrift, float cameraY, float time, Fireworks fireworks) {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
@@ -203,6 +206,9 @@ public class BackgroundRenderer implements Disposable {
         drawStars(starVisibility, cameraY, time);
         drawMoon(time, cameraY);
         drawShootingStars(starVisibility);
+        if (fireworks != null) {
+            fireworks.draw(shapes); // in the sky, with the skyline drawn in front of it
+        }
         drawCity(farCity, silhouette, Tunables.CITY_FAR_HFACTOR, Tunables.CITY_FAR_VFACTOR,
                 Tunables.CITY_FAR_ALPHA, Tunables.CITY_FAR_BRIGHTNESS, horizontalDrift, cameraY);
         drawCity(nearCity, silhouette, Tunables.CITY_NEAR_HFACTOR, Tunables.CITY_NEAR_VFACTOR,

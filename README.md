@@ -21,7 +21,8 @@ Tap to start on the title screen; tap to retry on game over.
 
 On the title screen — and on the game-over screen — tap the **Sound: On/Off**,
 **View: Flat/Iso**, **Difficulty: Easy/Normal/Hard**, and
-**Juice: None/Store Bought/Freshly Squeezed** lines to change them (they persist). Sound, view
+**Juice: None → Store Bought → Freshly Squeezed → Crushed and Ground** lines to change them
+(they persist). Sound, view
 and juice take effect immediately; a difficulty change applies to the next run. On desktop,
 **M** toggles sound, **V** toggles the view, **D** cycles difficulty, and **J** cycles juice —
 all of them mid-game too.
@@ -48,6 +49,7 @@ The whole game is timing plus juice, so how much of it you get is a setting:
 | **None**             | Bare blocks — no shake, squash, debris or particles. Just the stack.   |
 | **Store Bought**     | The house tuning: eased slide, landing squash, tumbling slice debris, camera rise and punch, the perfect burst, color drift. |
 | **Freshly Squeezed** | All of that turned up, plus hit-stop on impact, screen flashes, a camera zoom punch, a tower that sways, a motion trail behind the sliding block, dust out of every seam, debris that shatters, floating score popups, a pulsing HUD, and a sparkle over deep combos. |
+| **Crushed and Ground** | No restraint. Everything louder again, a half-second flash on a perfect, shockwave rings, a camera that rolls on impact, the whole tower rattling on a miss, a rainbow trail, fireworks over the skyline (on the title screen too), and an **ON FIRE** flare with confetti every five perfects. |
 
 It's cosmetic, so a change applies immediately — including mid-run.
 
@@ -115,7 +117,7 @@ Inside `core` (package `com.codeheadsystems.towerstack`):
 | `model`     | Pure, libGDX-free game logic: `Block`, `Tower`, `SliceMath`, `DropResult`, `GameState` |
 | `screens`   | `TitleScreen`, `PlayScreen` (play + game-over phase)                          |
 | `render`    | `BackgroundRenderer` (gradient + parallax); `BlockRenderer` with `FlatBlockRenderer` / `IsoBlockRenderer` |
-| `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient`, `HitStop`, `TowerSway`, `MotionTrail`, `DustPuff` |
+| `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient`, `HitStop`, `TowerSway`, `MotionTrail`, `DustPuff`, `Fireworks`, `Confetti` |
 | `audio`     | `ToneSynth` (synthesis + WAV encoding), `GameAudio` (the sound effects)       |
 | `ui`        | `TextRenderer`, `ScreenFade`, `ScreenFlash`, `ScorePopups`                     |
 | `util`      | `ScoreStore` (best score), `Settings` (sound, view, difficulty, juice options) |

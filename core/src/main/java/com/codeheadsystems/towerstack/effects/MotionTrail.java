@@ -12,7 +12,9 @@ import com.codeheadsystems.towerstack.render.BlockRenderer;
  * glance and a fast block at the top of a tall tower feels fast. Freshly Squeezed only.
  *
  * <p>Positions are sampled on a fixed interval into a small fixed ring, oldest last, and drawn
- * through the active {@link BlockRenderer} so the ghosts match whichever view is on.
+ * through the active {@link BlockRenderer} so the ghosts match whichever view is on. At Crushed
+ * and Ground the trail runs longer and the ghosts cycle through the spectrum instead of wearing
+ * the block's color.
  */
 public class MotionTrail {
 
@@ -24,9 +26,11 @@ public class MotionTrail {
         final Color color = new Color();
     }
 
-    private final Sample[] ring = new Sample[Tunables.TRAIL_SAMPLES];
+    private final Sample[] ring = new Sample[Tunables.TRAIL_SAMPLES_WILD];
+    private final Color scratch = new Color();
     private int count;
     private float sinceSample;
+    private float elapsed; // drives the hue cycle
 
     private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
 
@@ -34,6 +38,11 @@ public class MotionTrail {
         for (int i = 0; i < ring.length; i++) {
             ring[i] = new Sample();
         }
+    }
+
+    /** How many ghosts this juice level keeps — the ring is allocated for the longest. */
+    private int length() {
+        return level.isOverTheTop() ? Tunables.TRAIL_SAMPLES_WILD : Tunables.TRAIL_SAMPLES;
     }
 
     public void setLevel(JuiceLevel level) {
@@ -48,6 +57,7 @@ public class MotionTrail {
         if (!level.hasExtras()) {
             return;
         }
+        elapsed += delta;
         sinceSample += delta;
         if (sinceSample < Tunables.TRAIL_INTERVAL) {
             return;
@@ -58,7 +68,8 @@ public class MotionTrail {
 
     /** Shift the ring down one and write the newest pose at the front (no allocation). */
     private void push(Block moving) {
-        for (int i = Math.min(count, ring.length - 1); i > 0; i--) {
+        int length = length();
+        for (int i = Math.min(count, length - 1); i > 0; i--) {
             copy(ring[i - 1], ring[i]);
         }
         Sample head = ring[0];
@@ -67,7 +78,7 @@ public class MotionTrail {
         head.width = moving.getWidth();
         head.height = moving.getHeight();
         head.color.set(moving.getColor());
-        count = Math.min(count + 1, ring.length);
+        count = Math.min(count + 1, length);
     }
 
     private void copy(Sample from, Sample to) {
@@ -85,13 +96,25 @@ public class MotionTrail {
      *                leans along with it
      */
     public void draw(ShapeRenderer shapes, BlockRenderer renderer, float offsetX) {
-        for (int i = count - 1; i >= 0; i--) {
+        int length = length();
+        for (int i = Math.min(count, length) - 1; i >= 0; i--) {
             Sample sample = ring[i];
-            float fade = 1f - (float) i / ring.length; // index 0 is the newest, so the brightest
-            float alpha = Tunables.TRAIL_ALPHA * fade * fade * level.getIntensity();
+            float fade = 1f - (float) i / length; // index 0 is the newest, so the brightest
+            float alpha = Math.min(1f, Tunables.TRAIL_ALPHA * fade * fade * level.getIntensity());
             renderer.drawGhost(shapes, sample.left + offsetX, sample.bottom,
-                    sample.width, sample.height, sample.color, alpha);
+                    sample.width, sample.height, ghostColor(sample, i), alpha);
         }
+    }
+
+    private Color ghostColor(Sample sample, int index) {
+        if (!level.isOverTheTop()) {
+            return sample.color;
+        }
+        float hue = (elapsed * Tunables.TRAIL_RAINBOW_SPEED
+                + index * Tunables.TRAIL_RAINBOW_STEP) % 360f;
+        scratch.set(0f, 0f, 0f, 1f);
+        scratch.fromHsv(hue, 0.75f, 1f);
+        return scratch;
     }
 
     public void clear() {

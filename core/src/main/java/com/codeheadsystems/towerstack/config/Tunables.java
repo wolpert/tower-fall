@@ -266,6 +266,85 @@ public final class Tunables {
     public static final float HUD_PULSE_AMOUNT = 0.32f;
     public static final float HUD_PULSE_DECAY = 4.5f;
 
+    // --- Juice: Crushed and Ground ----------------------------------------
+    // The over-the-top tier. Everything below is either a louder replacement for a Freshly
+    // Squeezed number or an effect that exists only here.
+
+    /** A perfect washes the screen hard and takes half a second to let go. */
+    public static final float FLASH_PERFECT_ALPHA_WILD = 0.45f;
+    public static final float FLASH_PERFECT_PER_COMBO_WILD = 0.09f;
+    /** Stops short of a full whiteout — past about here the tower stops being readable. */
+    public static final float FLASH_PERFECT_MAX_WILD = 0.70f;
+    public static final float FLASH_PERFECT_DURATION_WILD = 0.50f;
+    public static final float FLASH_MISS_ALPHA_WILD = 0.70f;
+    public static final float FLASH_MISS_DURATION_WILD = 0.60f;
+
+    /** Impacts hang noticeably longer. */
+    public static final float HITSTOP_PERFECT_MAX_WILD = 0.26f;
+    public static final float HITSTOP_MISS_WILD = 0.45f;
+
+    // Camera roll: the view tips on an impact and rocks back upright.
+    public static final float ROLL_PUNCH_LAND = 1.3f; // degrees
+    public static final float ROLL_PUNCH_MISS = 5f;
+    public static final float ROLL_RECOVER_RATE = 4.5f;
+
+    // Tower rattle: a shock travelling down the stack, every block shaking (the base excepted).
+    // The phase step per block is what makes it a travelling wave rather than a rigid shift.
+    public static final float RATTLE_LAND = 3.5f;
+    public static final float RATTLE_MISS = 26f;
+    public static final float RATTLE_FREQUENCY = 34f;
+    public static final float RATTLE_DECAY = 2.2f;
+    public static final float RATTLE_PHASE_PER_BLOCK = 0.55f;
+
+    // Fireworks over the skyline: shells launched from the city that arc up and burst.
+    // Drawn in the background's fixed screen space, so they hang in the sky rather than
+    // scrolling with the tower.
+    public static final float FIREWORK_LAUNCH_Y = CITY_BASELINE + 30f;
+    public static final float FIREWORK_SHELL_SPEED_MIN = 520f;
+    public static final float FIREWORK_SHELL_SPEED_MAX = 730f;
+    public static final float FIREWORK_SHELL_DRIFT = 70f;
+    public static final float FIREWORK_GRAVITY = 340f;
+    public static final float FIREWORK_FUSE_MIN = 0.65f;
+    public static final float FIREWORK_FUSE_MAX = 1.05f;
+    public static final float FIREWORK_TAIL = 26f;
+    public static final int FIREWORK_SPARKS = 48;
+    public static final float FIREWORK_SPARK_SPEED = 220f;
+    public static final float FIREWORK_SPARK_LIFE = 1.3f;
+    public static final float FIREWORK_SPARK_SIZE = 4f;
+    public static final float FIREWORK_SPARK_DRAG = 1.2f;
+    public static final float FIREWORK_SPARK_GRAVITY = 120f;
+    public static final int FIREWORK_MILESTONE_SHELLS = 5;
+    public static final int FIREWORK_GAME_OVER_SHELLS = 7;
+    public static final float FIREWORK_TITLE_MIN_INTERVAL = 1.2f;
+    public static final float FIREWORK_TITLE_MAX_INTERVAL = 3f;
+
+    // Confetti: drawn in front of the tower, at a fixed place on screen, drifting down.
+    public static final int CONFETTI_COUNT = 80;
+    public static final float CONFETTI_FALL_SPEED = 200f;
+    public static final float CONFETTI_SWAY = 70f;
+    public static final float CONFETTI_SWAY_RATE = 3.4f;
+    public static final float CONFETTI_SPIN = 280f;
+    public static final float CONFETTI_SIZE = 9f;
+    public static final float CONFETTI_LIFE = 3.4f;
+    public static final float CONFETTI_SPAWN_BAND = 300f; // stagger above the top of the view
+
+    // Shockwave rings: concentric rings thrown out of a perfect seam, on top of the
+    // horizontal shockwave the lower tiers already draw.
+    public static final int RING_COUNT = 3;
+    public static final float RING_SPEED = 540f;
+    public static final float RING_LIFE = 0.5f;
+    public static final float RING_THICKNESS = 5f;
+    public static final float RING_STAGGER = 0.075f;
+    public static final int RING_SEGMENTS = 40;
+
+    // A longer, hue-cycling motion trail.
+    public static final int TRAIL_SAMPLES_WILD = 16;
+    public static final float TRAIL_RAINBOW_SPEED = 220f; // hue degrees per second
+    public static final float TRAIL_RAINBOW_STEP = 26f;   // hue degrees between ghosts
+
+    /** Every this many perfects in a row sets off the full flare. */
+    public static final int COMBO_MILESTONE = 5;
+
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
 

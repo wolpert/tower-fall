@@ -17,8 +17,10 @@ import com.codeheadsystems.towerstack.config.JuiceLevel;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.CameraRig;
 import com.codeheadsystems.towerstack.effects.ColorGradient;
+import com.codeheadsystems.towerstack.effects.Confetti;
 import com.codeheadsystems.towerstack.effects.DebrisField;
 import com.codeheadsystems.towerstack.effects.DustPuff;
+import com.codeheadsystems.towerstack.effects.Fireworks;
 import com.codeheadsystems.towerstack.effects.HitStop;
 import com.codeheadsystems.towerstack.effects.MotionTrail;
 import com.codeheadsystems.towerstack.effects.PerfectBurst;
@@ -50,9 +52,11 @@ import com.codeheadsystems.towerstack.util.Settings;
  * palette drifts with height.
  *
  * <p>How much of that the player actually sees is the {@link JuiceLevel} setting: None strips
- * the reactions back to bare blocks, Store Bought is the tuning above, and Freshly Squeezed
- * adds hit-stop, screen flashes, a zoom punch, a swaying tower, a motion trail, landing dust,
- * shattering debris, floating score popups and a pulsing HUD on top.
+ * the reactions back to bare blocks, Store Bought is the tuning above, Freshly Squeezed adds
+ * hit-stop, screen flashes, a zoom punch, a swaying tower, a motion trail, landing dust,
+ * shattering debris, floating score popups and a pulsing HUD on top, and Crushed and Ground
+ * piles on fireworks, a rolling camera, shockwave rings, a rattling tower, confetti and a
+ * milestone flare.
  *
  * <p>This screen stays a thin orchestrator: it owns the state machine and hands work to the
  * model (slice math, scoring) and to the isolated renderers and effect components.
@@ -105,6 +109,8 @@ public class PlayScreen extends ScreenAdapter {
     private final TowerSway sway;
     private final HitStop hitStop;
     private final ScorePopups popups;
+    private final Fireworks fireworks;
+    private final Confetti confetti;
     private final ColorGradient colors;
     private final GameAudio audio;
 
@@ -118,6 +124,7 @@ public class PlayScreen extends ScreenAdapter {
     private boolean newBest;
     private float elapsed;    // for star twinkle (horizontal city drift is frozen in a run)
     private float scorePulse; // 1 on a placement, decaying — punches the HUD score up
+    private JuiceLevel juice; // cached from Settings so the drop path can branch on the tier
 
     public PlayScreen(TowerStackGame game) {
         this.game = game;
@@ -141,6 +148,8 @@ public class PlayScreen extends ScreenAdapter {
         this.sway = new TowerSway();
         this.hitStop = new HitStop();
         this.popups = new ScorePopups();
+        this.fireworks = new Fireworks();
+        this.confetti = new Confetti();
         this.colors = new ColorGradient();
         this.audio = new GameAudio();
 
@@ -186,6 +195,8 @@ public class PlayScreen extends ScreenAdapter {
         sway.clear();
         hitStop.clear();
         flash.clear();
+        fireworks.clear();
+        confetti.clear();
     }
 
     /** Spawn the next moving block at the left edge, resting on the current tower top. */
@@ -231,6 +242,10 @@ public class PlayScreen extends ScreenAdapter {
         sway.update(worldDelta);
         cameraRig.update(worldDelta);
 
+        // The sky and the paper keep their own time — a hit-stop shouldn't hang a firework
+        // mid-air on the far side of the screen.
+        fireworks.update(delta);
+        confetti.update(delta);
         popups.update(delta);
         flash.update(delta);
         fade.update(delta);
@@ -302,19 +317,21 @@ public class PlayScreen extends ScreenAdapter {
      * immediately — dialing it down mid-run clears whatever is still on screen.
      */
     private void applyJuice() {
-        JuiceLevel level = settings.juice();
-        cameraRig.setLevel(level);
-        squash.setLevel(level);
-        debris.setLevel(level);
-        burst.setLevel(level);
-        dust.setLevel(level);
-        trail.setLevel(level);
-        sway.setLevel(level);
-        hitStop.setLevel(level);
-        popups.setLevel(level);
-        flash.setLevel(level);
-        audio.setLevel(level);
-        if (!level.isOn()) {
+        juice = settings.juice();
+        cameraRig.setLevel(juice);
+        squash.setLevel(juice);
+        debris.setLevel(juice);
+        burst.setLevel(juice);
+        dust.setLevel(juice);
+        trail.setLevel(juice);
+        sway.setLevel(juice);
+        hitStop.setLevel(juice);
+        popups.setLevel(juice);
+        flash.setLevel(juice);
+        fireworks.setLevel(juice);
+        confetti.setLevel(juice);
+        audio.setLevel(juice);
+        if (!juice.isOn()) {
             clearEffects();
         }
     }
@@ -367,7 +384,9 @@ public class PlayScreen extends ScreenAdapter {
 
         squash.trigger();
         cameraRig.punch(Tunables.LAND_PUNCH);
+        cameraRig.rollPunch(-travel * Tunables.ROLL_PUNCH_LAND);
         sway.kick(Tunables.SWAY_LAND_KICK, travel);
+        sway.rattle(Tunables.RATTLE_LAND);
         scorePulse = 1f;
 
         // The seam the block just landed on, in render space — where the celebration happens.
@@ -381,16 +400,16 @@ public class PlayScreen extends ScreenAdapter {
             burst.trigger(seamX, seamY, combo, placed.getColor());
             audio.perfect(combo);
             audio.sparkle(combo);
-            hitStop.trigger(Math.min(Tunables.HITSTOP_PERFECT_MAX,
-                    Tunables.HITSTOP_PERFECT + combo * Tunables.HITSTOP_PER_COMBO));
+            hitStop.trigger(perfectHitStop(combo));
             cameraRig.zoomPunch(Tunables.ZOOM_PUNCH_PERFECT);
             flashTint.set(placed.getColor()).lerp(Color.WHITE, 0.5f);
-            flash.flash(flashTint,
-                    Math.min(Tunables.FLASH_PERFECT_MAX,
-                            Tunables.FLASH_PERFECT_ALPHA + combo * Tunables.FLASH_PERFECT_PER_COMBO),
-                    Tunables.FLASH_PERFECT_DURATION);
+            flash.flash(flashTint, perfectFlashAlpha(combo), perfectFlashDuration());
             popups.add("PERFECT  +" + gained, seamX, hudY(seamY), Color.GOLD,
                     Tunables.POPUP_SCALE * 1.1f);
+            fireworks.launch(1 + combo / 3); // the sky gets busier as the streak runs
+            if (combo % Tunables.COMBO_MILESTONE == 0) {
+                milestoneFlare(combo, seamY);
+            }
         } else {
             audio.land();
             popups.add("+" + gained, seamX, hudY(seamY), Color.WHITE, Tunables.POPUP_SCALE);
@@ -407,18 +426,63 @@ public class PlayScreen extends ScreenAdapter {
         cameraRig.followTop(tower.top().topEdge());
     }
 
+    /**
+     * The full flare on every {@link Tunables#COMBO_MILESTONE}th perfect: a volley of shells,
+     * confetti, an extra kick and a banner over the seam. Over-the-top only — every piece of it
+     * no-ops at the lower levels, so the call site stays unconditional.
+     */
+    private void milestoneFlare(int combo, float seamY) {
+        fireworks.launch(Tunables.FIREWORK_MILESTONE_SHELLS);
+        confetti.burst();
+        if (juice.isOverTheTop()) {
+            cameraRig.punch(Tunables.MISS_PUNCH);
+            flash.flash(Color.WHITE, Tunables.FLASH_PERFECT_MAX_WILD,
+                    Tunables.FLASH_PERFECT_DURATION_WILD);
+            popups.add("ON FIRE  x" + combo, Tunables.WORLD_WIDTH / 2f, hudY(seamY) + 90f,
+                    Color.ORANGE, Tunables.POPUP_SCALE * 1.8f);
+        }
+    }
+
+    private float perfectHitStop(int combo) {
+        float duration = Tunables.HITSTOP_PERFECT + combo * Tunables.HITSTOP_PER_COMBO;
+        return juice.isOverTheTop()
+                ? Math.min(Tunables.HITSTOP_PERFECT_MAX_WILD, duration * 1.8f)
+                : Math.min(Tunables.HITSTOP_PERFECT_MAX, duration);
+    }
+
+    private float perfectFlashAlpha(int combo) {
+        return juice.isOverTheTop()
+                ? Math.min(Tunables.FLASH_PERFECT_MAX_WILD, Tunables.FLASH_PERFECT_ALPHA_WILD
+                        + combo * Tunables.FLASH_PERFECT_PER_COMBO_WILD)
+                : Math.min(Tunables.FLASH_PERFECT_MAX, Tunables.FLASH_PERFECT_ALPHA
+                        + combo * Tunables.FLASH_PERFECT_PER_COMBO);
+    }
+
+    private float perfectFlashDuration() {
+        return juice.isOverTheTop()
+                ? Tunables.FLASH_PERFECT_DURATION_WILD
+                : Tunables.FLASH_PERFECT_DURATION;
+    }
+
     /** A total miss: fling the block away as debris, punch the camera, end the run. */
     private void handleMiss(Block top) {
         state.gameOver();
         newBest = scoreStore.submit(state.getScore());
         cameraRig.punch(Tunables.MISS_PUNCH);
         cameraRig.zoomPunch(Tunables.ZOOM_PUNCH_MISS);
-        hitStop.trigger(Tunables.HITSTOP_MISS);
-        flash.flash(Color.RED, Tunables.FLASH_MISS_ALPHA, Tunables.FLASH_MISS_DURATION);
         audio.gameOver();
+
+        boolean wild = juice.isOverTheTop();
+        hitStop.trigger(wild ? Tunables.HITSTOP_MISS_WILD : Tunables.HITSTOP_MISS);
+        flash.flash(Color.RED,
+                wild ? Tunables.FLASH_MISS_ALPHA_WILD : Tunables.FLASH_MISS_ALPHA,
+                wild ? Tunables.FLASH_MISS_DURATION_WILD : Tunables.FLASH_MISS_DURATION);
 
         int outward = moving.centerX() < top.centerX() ? -1 : +1;
         sway.kick(Tunables.SWAY_MISS_KICK, outward);
+        sway.rattle(Tunables.RATTLE_MISS); // the whole stack shudders
+        cameraRig.rollPunch(outward * Tunables.ROLL_PUNCH_MISS);
+        fireworks.launch(Tunables.FIREWORK_GAME_OVER_SHELLS); // a send-off for the run
         blockRenderer.project(moving.centerX(), moving.getBottom(), renderPoint);
         popups.add("MISS", renderPoint.x, hudY(renderPoint.y),
                 Color.SCARLET, Tunables.POPUP_SCALE * 1.3f);
@@ -466,7 +530,7 @@ public class PlayScreen extends ScreenAdapter {
         int height = state.getBlocksPlaced();
         // In a run: no horizontal drift; the city recedes and stars fade in with camera height.
         background.draw(colors.backgroundBottom(height), colors.backgroundTop(height),
-                colors.parallax(height), 0f, cameraRig.centerY(), elapsed);
+                colors.parallax(height), 0f, cameraRig.centerY(), elapsed, fireworks);
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -484,6 +548,7 @@ public class PlayScreen extends ScreenAdapter {
         debris.draw(shapes);
         dust.draw(shapes);
         burst.draw(shapes);
+        confetti.draw(shapes, cameraRig.viewBottom()); // in front of everything in the world
         shapes.end();
 
         drawHud();

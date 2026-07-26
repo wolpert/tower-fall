@@ -13,6 +13,10 @@ package com.codeheadsystems.towerstack.config;
  *       the extras gated on {@link #hasExtras()}: hit-stop on impact, screen flashes, a camera
  *       zoom punch, a swaying tower, a motion trail behind the sliding block, landing dust,
  *       shattering debris, floating score popups, a pulsing HUD and a combo sparkle.</li>
+ *   <li><b>Crushed and Ground</b> — no restraint at all. Everything again louder, plus the
+ *       {@link #isOverTheTop()} tier: a half-second flash on a perfect, the whole tower
+ *       rattling on a miss, fireworks over the skyline, a rolling camera, shockwave rings,
+ *       confetti and a milestone flare every few perfects.</li>
  * </ul>
  *
  * <p>Pure config — no libGDX. Effects read the level rather than the screen branching on it,
@@ -20,18 +24,21 @@ package com.codeheadsystems.towerstack.config;
  */
 public enum JuiceLevel {
 
-    NONE("None", 0f, false),
-    STORE_BOUGHT("Store Bought", 1f, false),
-    FRESHLY_SQUEEZED("Freshly Squeezed", 1.4f, true);
+    NONE("None", 0f, false, false),
+    STORE_BOUGHT("Store Bought", 1f, false, false),
+    FRESHLY_SQUEEZED("Freshly Squeezed", 1.4f, true, false),
+    CRUSHED_AND_GROUND("Crushed and Ground", 2.2f, true, true);
 
     private final String label;
-    private final float intensity; // multiplies the shared effect magnitudes; 0 disables them
-    private final boolean extras;  // gates the effects that exist only at the top level
+    private final float intensity;    // multiplies the shared effect magnitudes; 0 disables them
+    private final boolean extras;     // gates the effects added at Freshly Squeezed
+    private final boolean overTheTop; // gates the ones added at Crushed and Ground
 
-    JuiceLevel(String label, float intensity, boolean extras) {
+    JuiceLevel(String label, float intensity, boolean extras, boolean overTheTop) {
         this.label = label;
         this.intensity = intensity;
         this.extras = extras;
+        this.overTheTop = overTheTop;
     }
 
     public String getLabel() {
@@ -43,9 +50,14 @@ public enum JuiceLevel {
         return intensity;
     }
 
-    /** Whether the Freshly Squeezed-only effects run. */
+    /** Whether the Freshly Squeezed-and-up effects run. */
     public boolean hasExtras() {
         return extras;
+    }
+
+    /** Whether the Crushed and Ground-only effects run — fireworks, rings, confetti, rattle. */
+    public boolean isOverTheTop() {
+        return overTheTop;
     }
 
     /** Whether any juice at all is served (false only for {@link #NONE}). */
@@ -53,7 +65,7 @@ public enum JuiceLevel {
         return intensity > 0f;
     }
 
-    /** The next level, wrapping None → Store Bought → Freshly Squeezed → None. */
+    /** The next level, wrapping around from the last back to {@link #NONE}. */
     public JuiceLevel next() {
         JuiceLevel[] all = values();
         return all[(ordinal() + 1) % all.length];

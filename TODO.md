@@ -64,11 +64,12 @@ The title now drifts the city **horizontally** (left) via a time accumulator in
 A `config/JuiceLevel` enum now carries the presentation setting, with a scalar the shared
 effects multiply by and a flag gating the new ones:
 
-| Level             | Intensity | Extras |
-| ----------------- | --------- | ------ |
-| None              | 0.0       | no     |
-| Store Bought      | 1.0       | no     |
-| Freshly Squeezed  | 1.4       | yes    |
+| Level              | Intensity | Extras | Over the top |
+| ------------------ | --------- | ------ | ------------ |
+| None               | 0.0       | no     | no           |
+| Store Bought       | 1.0       | no     | no           |
+| Freshly Squeezed   | 1.4       | yes    | no           |
+| Crushed and Ground | 2.2       | yes    | yes          |
 
 **None** strips every reaction — no shake, squash, debris, burst — leaving bare blocks (the
 scenery layers stay; they aren't reactions). **Store Bought** is the original §6 tuning.
@@ -93,14 +94,34 @@ scenery layers stay; they aren't reactions). **Store Bought** is the original §
 - **Combo sparkle** (`GameAudio.sparkle`) — a synthesized arpeggio layered over the perfect tone
   from combo 3 up.
 
+**Crushed and Ground** takes the lid off:
+
+- **A half-second flash** on a perfect, up to 0.70 alpha and climbing with the combo (stopping
+  short of a whiteout, past which the tower stops being readable), and a heavier red on a miss.
+- **Tower rattle** (`TowerSway.rattle`) — a miss shakes the whole stack, not just the crown. The
+  phase steps per block, so the shock visibly travels up the tower rather than shifting it
+  rigidly.
+- **Fireworks** (`effects/Fireworks`) — shells launched from the skyline that arc up and burst,
+  one or more on every perfect, a volley on a milestone, and a send-off on game over. They live
+  in the backdrop's fixed screen space (drawn by `BackgroundRenderer`, behind the city) so they
+  hang in the sky instead of scrolling with the tower. The title screen runs them ambiently at
+  this level, so picking it previews itself.
+- **Camera roll** (`CameraRig.rollPunch`) — the view tips a few degrees on impact and rocks back.
+  The backdrop deliberately stays level; the tower tipping against a level sky is what sells it.
+- **Shockwave rings** — a stagger of expanding annuli out of the perfect seam.
+- **Confetti** (`effects/Confetti`) — screen-space paper, in front of everything.
+- **Milestone flare** — every `COMBO_MILESTONE` (5) perfects: an **ON FIRE xN** banner, a
+  firework volley, confetti and an extra kick.
+- **A longer, hue-cycling motion trail**.
+
 The choice persists in `Settings` (`juice()` / `cycleJuice()`), is a fourth tappable line on the
 title and game-over screens, and is **J** on desktop. Unlike difficulty it applies live — it's
 cosmetic — and dialing it down clears whatever is still on screen.
 
 Remaining nice-to-haves from the original list:
 
-- Combo **milestone** effects (e.g. every 5 perfects: a bigger, distinct celebration).
 - Near-miss emphasis — extra shake/whoosh when a surviving slice is very thin.
-- Background reactive pulse — parallax layers nudge on landings. (The background does not
-  currently follow the camera's zoom punch either, which would be the same plumbing.)
+- Background reactive pulse — parallax layers nudge on landings. (The backdrop follows neither
+  the zoom punch nor the roll, which would be the same plumbing.)
 - Android **haptics** — vibrate on land / perfect / miss.
+- Audio has no over-the-top tier of its own — Crushed and Ground sounds like Freshly Squeezed.
