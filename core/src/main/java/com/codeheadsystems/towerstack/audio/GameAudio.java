@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Disposable;
+import com.codeheadsystems.towerstack.config.JuiceLevel;
 import com.codeheadsystems.towerstack.config.Tunables;
 import java.util.Random;
 
@@ -20,10 +21,12 @@ public class GameAudio implements Disposable {
 
     private boolean available; // whether an audio device/codec loaded successfully
     private boolean muted;     // player's sound on/off choice
+    private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
     private Sound land;
     private Sound slice;
     private Sound perfect;
     private Sound gameOver;
+    private Sound sparkle;
 
     public GameAudio() {
         try {
@@ -31,6 +34,7 @@ public class GameAudio implements Disposable {
             slice = load("slice", buildSlice());
             perfect = load("perfect", buildPerfect());
             gameOver = load("gameover", buildGameOver());
+            sparkle = load("sparkle", buildSparkle());
             available = true;
         } catch (Exception e) {
             available = false;
@@ -41,6 +45,14 @@ public class GameAudio implements Disposable {
     /** Enable/disable playback per the player's preference (does not free resources). */
     public void setMuted(boolean muted) {
         this.muted = muted;
+    }
+
+    /**
+     * The juice setting only adds to the mix — the four core effects always play (silence is
+     * the Sound toggle's job); the sparkle layer is Freshly Squeezed only.
+     */
+    public void setLevel(JuiceLevel level) {
+        this.level = level;
     }
 
     private boolean canPlay() {
@@ -65,6 +77,16 @@ public class GameAudio implements Disposable {
     public void perfect(int combo) {
         if (canPlay()) {
             perfect.play(Tunables.VOLUME_PERFECT, pitchFor(combo), 0f);
+        }
+    }
+
+    /**
+     * A shimmer layered over the perfect tone once a streak is really going — the top juice
+     * level's reward for a run of perfects. No-op below {@link Tunables#SPARKLE_MIN_COMBO}.
+     */
+    public void sparkle(int combo) {
+        if (canPlay() && level.hasExtras() && combo >= Tunables.SPARKLE_MIN_COMBO) {
+            sparkle.play(Tunables.VOLUME_SPARKLE, pitchFor(combo), 0f);
         }
     }
 
@@ -120,6 +142,28 @@ public class GameAudio implements Disposable {
         return out;
     }
 
+    /**
+     * Four short high blips climbing a major arpeggio — the shimmer over a deep combo. Each
+     * note gets its own quick decay, and they overlap slightly so it reads as one gesture.
+     */
+    private float[] buildSparkle() {
+        float[] notes = {1320f, 1760f, 2200f, 2640f}; // E6-ish major arpeggio, up
+        float noteSec = 0.05f;
+        int step = ToneSynth.samples(noteSec * 0.7f); // overlap the tails
+        int n = step * notes.length + ToneSynth.samples(noteSec);
+        float[] out = new float[n];
+        for (int note = 0; note < notes.length; note++) {
+            int start = note * step;
+            int length = ToneSynth.samples(noteSec);
+            for (int i = 0; i < length && start + i < n; i++) {
+                float t = (float) i / ToneSynth.SAMPLE_RATE;
+                float env = ToneSynth.attack(i, 0.002f) * ToneSynth.decay(i, 34f);
+                out[start + i] += env * 0.5f * (float) Math.sin(2 * Math.PI * notes[note] * t);
+            }
+        }
+        return out;
+    }
+
     /** A low sine sweeping downward — an ominous thud on the miss. */
     private float[] buildGameOver() {
         int n = ToneSynth.samples(0.45f);
@@ -156,6 +200,9 @@ public class GameAudio implements Disposable {
         }
         if (gameOver != null) {
             gameOver.dispose();
+        }
+        if (sparkle != null) {
+            sparkle.dispose();
         }
     }
 }

@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
+import com.codeheadsystems.towerstack.config.JuiceLevel;
 import com.codeheadsystems.towerstack.config.Tunables;
 
 /**
@@ -41,15 +42,29 @@ public class PerfectBurst {
     private float shockTime = -1f; // negative = no active shockwave
     private float shockIntensity;
 
+    private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
+
+    /** Scale the celebration with the juice setting; None skips it entirely. */
+    public void setLevel(JuiceLevel level) {
+        this.level = level;
+        if (!level.isOn()) {
+            clear();
+        }
+    }
+
     /**
      * Fire a burst at a seam point.
      *
      * @param combo the current combo length; scales particle count and shockwave brightness
      */
     public void trigger(float x, float y, int combo, Color color) {
-        int count = Math.min(
+        if (!level.isOn()) {
+            return;
+        }
+        float scale = level.getIntensity();
+        int count = Math.round(Math.min(
                 Tunables.BURST_BASE_PARTICLES + combo * Tunables.BURST_PER_COMBO,
-                Tunables.BURST_MAX_PARTICLES);
+                Tunables.BURST_MAX_PARTICLES) * scale);
         for (int i = 0; i < count; i++) {
             float angle = MathUtils.PI2 * i / count + MathUtils.random(-0.15f, 0.15f);
             float speed = Tunables.BURST_PARTICLE_SPEED * MathUtils.random(0.4f, 1f);

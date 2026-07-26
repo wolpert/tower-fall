@@ -20,10 +20,11 @@ One action — **drop** — mapped to all of:
 Tap to start on the title screen; tap to retry on game over.
 
 On the title screen — and on the game-over screen — tap the **Sound: On/Off**,
-**View: Flat/Iso**, and **Difficulty: Easy/Normal/Hard** lines to change them (they persist).
-Sound and view take effect immediately; a difficulty change applies to the next run. On
-desktop, **M** toggles sound, **V** toggles the view, and **D** cycles difficulty — all of
-them mid-game too.
+**View: Flat/Iso**, **Difficulty: Easy/Normal/Hard**, and
+**Juice: None/Store Bought/Freshly Squeezed** lines to change them (they persist). Sound, view
+and juice take effect immediately; a difficulty change applies to the next run. On desktop,
+**M** toggles sound, **V** toggles the view, **D** cycles difficulty, and **J** cycles juice —
+all of them mid-game too.
 
 ## Gameplay
 
@@ -37,6 +38,18 @@ them mid-game too.
 
 An optional **isometric view** renders the same game as a 3D block skin, and a subtle
 **parallax** skyline drifts behind the tower as you climb.
+
+## Juice
+
+The whole game is timing plus juice, so how much of it you get is a setting:
+
+| Level                | What you get                                                          |
+|----------------------|-----------------------------------------------------------------------|
+| **None**             | Bare blocks — no shake, squash, debris or particles. Just the stack.   |
+| **Store Bought**     | The house tuning: eased slide, landing squash, tumbling slice debris, camera rise and punch, the perfect burst, color drift. |
+| **Freshly Squeezed** | All of that turned up, plus hit-stop on impact, screen flashes, a camera zoom punch, a tower that sways, a motion trail behind the sliding block, dust out of every seam, debris that shatters, floating score popups, a pulsing HUD, and a sparkle over deep combos. |
+
+It's cosmetic, so a change applies immediately — including mid-run.
 
 ## Tech
 
@@ -98,20 +111,20 @@ Inside `core` (package `com.codeheadsystems.towerstack`):
 
 | Package     | Contents                                                                     |
 |-------------|------------------------------------------------------------------------------|
-| `config`    | `Tunables` — every gameplay-feel constant in one place; `Difficulty` — the Easy/Normal/Hard knobs |
+| `config`    | `Tunables` — every gameplay-feel constant in one place; `Difficulty` — the Easy/Normal/Hard knobs; `JuiceLevel` — how much juice to serve |
 | `model`     | Pure, libGDX-free game logic: `Block`, `Tower`, `SliceMath`, `DropResult`, `GameState` |
 | `screens`   | `TitleScreen`, `PlayScreen` (play + game-over phase)                          |
 | `render`    | `BackgroundRenderer` (gradient + parallax); `BlockRenderer` with `FlatBlockRenderer` / `IsoBlockRenderer` |
-| `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient` |
-| `audio`     | `ToneSynth` (synthesis + WAV encoding), `GameAudio` (the four sound effects)  |
-| `ui`        | `TextRenderer`, `ScreenFade`                                                  |
-| `util`      | `ScoreStore` (best score), `Settings` (sound, view, difficulty options)       |
+| `effects`   | Isolated, individually tunable juice: `CameraRig`, `SquashStretch`, `Debris`/`DebrisField`, `PerfectBurst`, `ColorGradient`, `HitStop`, `TowerSway`, `MotionTrail`, `DustPuff` |
+| `audio`     | `ToneSynth` (synthesis + WAV encoding), `GameAudio` (the sound effects)       |
+| `ui`        | `TextRenderer`, `ScreenFade`, `ScreenFlash`, `ScorePopups`                     |
+| `util`      | `ScoreStore` (best score), `Settings` (sound, view, difficulty, juice options) |
 
 ### Tuning
 
 All the numbers that shape how the game feels — speeds, the difficulty curve, perfect
-tolerance, width regrowth, squash amount, camera shake, particle counts, colors, volumes —
-live as constants in [`core/.../config/Tunables.java`](core/src/main/java/com/codeheadsystems/towerstack/config/Tunables.java).
+tolerance, width regrowth, squash amount, camera shake, hit-stop lengths, sway, particle
+counts, colors, volumes — live as constants in [`core/.../config/Tunables.java`](core/src/main/java/com/codeheadsystems/towerstack/config/Tunables.java).
 Each juice effect is its own small class so it can be dialed in independently.
 
 ## License

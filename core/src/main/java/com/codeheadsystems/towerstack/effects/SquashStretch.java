@@ -1,5 +1,6 @@
 package com.codeheadsystems.towerstack.effects;
 
+import com.codeheadsystems.towerstack.config.JuiceLevel;
 import com.codeheadsystems.towerstack.config.Tunables;
 
 /**
@@ -13,9 +14,21 @@ import com.codeheadsystems.towerstack.config.Tunables;
 public class SquashStretch {
 
     private float time = -1f; // negative = inactive
+    private JuiceLevel level = JuiceLevel.STORE_BOUGHT;
+
+    /** Scale the squash with the juice setting; None flattens it away entirely. */
+    public void setLevel(JuiceLevel level) {
+        this.level = level;
+        if (!level.isOn()) {
+            time = -1f;
+        }
+    }
 
     /** Fire the squash from the moment of impact. */
     public void trigger() {
+        if (!level.isOn()) {
+            return;
+        }
         time = 0f;
     }
 
@@ -29,11 +42,15 @@ public class SquashStretch {
     }
 
     public float scaleX() {
-        return 1f + Tunables.SQUASH_AMPLITUDE * 0.5f * wave();
+        return 1f + amplitude() * 0.5f * wave();
     }
 
     public float scaleY() {
-        return 1f - Tunables.SQUASH_AMPLITUDE * wave();
+        return 1f - amplitude() * wave();
+    }
+
+    private float amplitude() {
+        return Tunables.SQUASH_AMPLITUDE * level.getIntensity();
     }
 
     /** Damped cosine: 1 at impact (fully squashed), oscillating to 0 as it settles. */

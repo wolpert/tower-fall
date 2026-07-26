@@ -57,10 +57,18 @@ public class TextRenderer implements Disposable {
 
     /** Draw a horizontally centered line at world-y {@code y}. Call between begin/end. */
     public void drawCentered(String text, float y, Color color, float scale) {
+        drawCenteredAt(text, Tunables.WORLD_WIDTH / 2f, y, color, scale);
+    }
+
+    /**
+     * Draw a line centered on an arbitrary point — for text that follows the action rather than
+     * sitting in a fixed HUD slot (see {@link ScorePopups}). The color's alpha is honored.
+     */
+    public void drawCenteredAt(String text, float centerX, float y, Color color, float scale) {
         font.getData().setScale(scale);
         font.setColor(color);
         layout.setText(font, text);
-        font.draw(batch, layout, (Tunables.WORLD_WIDTH - layout.width) / 2f, y);
+        font.draw(batch, layout, centerX - layout.width / 2f, y);
     }
 
     @Override

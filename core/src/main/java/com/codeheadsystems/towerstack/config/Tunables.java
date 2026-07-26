@@ -183,6 +183,89 @@ public final class Tunables {
     public static final float SHOOTING_STAR_WIDTH = 3f;
     public static final float SHOOTING_STAR_MIN_VISIBILITY = 0.3f;
 
+    // --- Juice: hit-stop (Freshly Squeezed) -------------------------------
+    // A brief near-freeze on impact so the hit registers before the world moves on. The world
+    // (blocks, effects, camera) runs at HITSTOP_TIME_SCALE while it lasts; input is unaffected.
+
+    public static final float HITSTOP_TIME_SCALE = 0.10f;
+    public static final float HITSTOP_PERFECT = 0.055f;
+    public static final float HITSTOP_PER_COMBO = 0.012f;
+    public static final float HITSTOP_PERFECT_MAX = 0.13f;
+    public static final float HITSTOP_MISS = 0.20f;
+
+    // --- Juice: screen flash (Freshly Squeezed) ---------------------------
+    // A full-screen wash: the block's own color on a perfect, red on a miss.
+
+    public static final float FLASH_PERFECT_ALPHA = 0.16f;
+    public static final float FLASH_PERFECT_PER_COMBO = 0.045f;
+    public static final float FLASH_PERFECT_MAX = 0.50f;
+    public static final float FLASH_PERFECT_DURATION = 0.20f;
+    public static final float FLASH_MISS_ALPHA = 0.34f;
+    public static final float FLASH_MISS_DURATION = 0.32f;
+
+    // --- Juice: camera zoom punch (Freshly Squeezed) ----------------------
+    // An additive offset on the camera zoom that decays back to 1: a shove in on a perfect,
+    // a lurch out on a miss.
+
+    public static final float ZOOM_PUNCH_PERFECT = -0.045f;
+    public static final float ZOOM_PUNCH_MISS = 0.075f;
+    public static final float ZOOM_RECOVER_RATE = 5.5f;
+
+    // --- Juice: tower sway (Freshly Squeezed) -----------------------------
+    // A damped horizontal lean kicked by every landing. Largest at the top and rigid a few
+    // blocks down (SWAY_SPAN_BLOCKS), and the planted base never moves (SWAY_ROOT_BLOCKS).
+
+    public static final float SWAY_LAND_KICK = 5f;   // world units of lean at the top
+    public static final float SWAY_MISS_KICK = 11f;
+    public static final float SWAY_FREQUENCY = 9f;   // rad/sec
+    public static final float SWAY_DECAY = 2.6f;
+    public static final float SWAY_SPAN_BLOCKS = 9f;
+    public static final float SWAY_ROOT_BLOCKS = 2f;
+
+    // --- Juice: motion trail (Freshly Squeezed) ---------------------------
+    // Fading ghosts of the sliding block, sampled on a fixed interval.
+
+    public static final int TRAIL_SAMPLES = 7;
+    public static final float TRAIL_INTERVAL = 0.022f;
+    public static final float TRAIL_ALPHA = 0.30f;
+
+    // --- Juice: landing dust (Freshly Squeezed) ---------------------------
+    // A puff kicked sideways out of the seam on every landing, perfect or not.
+
+    public static final int DUST_COUNT = 9;
+    public static final float DUST_SPEED = 120f;
+    public static final float DUST_RISE = 90f;
+    public static final float DUST_GRAVITY = 420f;
+    public static final float DUST_LIFE = 0.45f;
+    public static final float DUST_SIZE = 7f;
+    public static final float DUST_ALPHA = 0.6f;
+
+    /**
+     * How far the motes are lightened toward white. Without this they are the block's own color
+     * sitting on top of the block, and effectively invisible.
+     */
+    public static final float DUST_TINT = 0.6f;
+
+    // --- Juice: debris shatter (Freshly Squeezed) -------------------------
+    // A shorn slice breaks into several tumbling pieces instead of one.
+
+    public static final int SHATTER_MAX_PIECES = 4;
+    public static final float SHATTER_MIN_PIECE = 9f; // don't split below this width
+
+    // --- Juice: score popups (Freshly Squeezed) ---------------------------
+    // Floating text that rises from the seam in screen space and fades.
+
+    public static final float POPUP_LIFE = 0.85f;
+    public static final float POPUP_RISE = 70f;
+    public static final float POPUP_SCALE = 1.0f;
+    public static final float POPUP_FADE_START = 0.45f; // fraction of life spent fully opaque
+
+    // --- Juice: HUD pulse (Freshly Squeezed) ------------------------------
+    // The score punches up a little whenever it changes.
+
+    public static final float HUD_PULSE_AMOUNT = 0.32f;
+    public static final float HUD_PULSE_DECAY = 4.5f;
+
     // --- Screen transitions -----------------------------------------------
     // Fade-in-from-black durations (seconds). Kept short so retries stay snappy.
 
@@ -200,4 +283,8 @@ public final class Tunables {
     /** Pitch multiplier added per combo level to the perfect tone, capped for sanity. */
     public static final float COMBO_PITCH_STEP = 0.06f;
     public static final float COMBO_PITCH_MAX = 2.0f;
+
+    /** Extra shimmer layered over the perfect tone once the streak reaches this length. */
+    public static final int SPARKLE_MIN_COMBO = 3;
+    public static final float VOLUME_SPARKLE = 0.35f;
 }

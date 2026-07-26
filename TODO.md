@@ -59,21 +59,48 @@ Remaining nice-to-have:
 The title now drifts the city **horizontally** (left) via a time accumulator in
 `TitleScreen`; the drift stops in a run (`PlayScreen` passes 0), where height takes over.
 
-## 5. More juice options
+## 5. More juice options — DONE
 
-Current juice: eased slide, landing squash/stretch, slice debris, camera rise + punch/shake,
-perfect burst + shockwave, height color gradient, combo ramp, procedural audio. Ideas to explore
-— each as its own small effect class, following the existing `effects/` pattern, triggered from
-`PlayScreen.dropBlock` / `handleMiss`, with knobs in `Tunables`:
+A `config/JuiceLevel` enum now carries the presentation setting, with a scalar the shared
+effects multiply by and a flag gating the new ones:
 
-- Screen-edge flash / vignette pulse on a perfect, and on a miss.
-- Trail / ghost or motion streak on the moving block.
-- Score/combo **number pop** — the HUD text scales up briefly when it changes.
-- Combo **milestone** effects (e.g. every 5 perfects: bigger burst, brief slow-mo, color flare).
-- Neighbor wobble — nearby blocks jiggle on a heavy landing.
+| Level             | Intensity | Extras |
+| ----------------- | --------- | ------ |
+| None              | 0.0       | no     |
+| Store Bought      | 1.0       | no     |
+| Freshly Squeezed  | 1.4       | yes    |
+
+**None** strips every reaction — no shake, squash, debris, burst — leaving bare blocks (the
+scenery layers stay; they aren't reactions). **Store Bought** is the original §6 tuning.
+**Freshly Squeezed** turns that up and adds:
+
+- **Hit-stop** (`effects/HitStop`) — the world runs at a tenth speed for 55–200 ms on a perfect
+  (scaling with combo) or a miss. `PlayScreen.update` runs the world on the delta it returns and
+  keeps input, overlays and background on the real clock.
+- **Screen flash** (`ui/ScreenFlash`) — block-tinted on a perfect, brightening with the combo;
+  red on a miss.
+- **Camera zoom punch** (`CameraRig.zoomPunch`) — shoves in on a perfect, lurches out on a miss.
+- **Tower sway** (`effects/TowerSway`) — a damped lean kicked by every landing, largest at the
+  crown, rigid at the planted base. Both block renderers apply it per block.
+- **Motion trail** (`effects/MotionTrail`) — fading ghosts behind the sliding block, drawn
+  through the active renderer so it works in either view.
+- **Landing dust** (`effects/DustPuff`) — a puff out of the seam on *every* landing, which is
+  what the ordinary (non-perfect) placement was missing.
+- **Debris shatter** (`DebrisField.shatter`) — the shorn slice breaks into up to four tumbling
+  pieces, outermost thrown hardest.
+- **Score popups** (`ui/ScorePopups`) — "PERFECT +4" / "+1" / "MISS" rising from the seam.
+- **HUD pulse** — score and combo text punch up on a placement (`scorePulse` in `PlayScreen`).
+- **Combo sparkle** (`GameAudio.sparkle`) — a synthesized arpeggio layered over the perfect tone
+  from combo 3 up.
+
+The choice persists in `Settings` (`juice()` / `cycleJuice()`), is a fourth tappable line on the
+title and game-over screens, and is **J** on desktop. Unlike difficulty it applies live — it's
+cosmetic — and dialing it down clears whatever is still on screen.
+
+Remaining nice-to-haves from the original list:
+
+- Combo **milestone** effects (e.g. every 5 perfects: a bigger, distinct celebration).
 - Near-miss emphasis — extra shake/whoosh when a surviving slice is very thin.
-- Background reactive pulse — parallax layers nudge on landings.
+- Background reactive pulse — parallax layers nudge on landings. (The background does not
+  currently follow the camera's zoom punch either, which would be the same plumbing.)
 - Android **haptics** — vibrate on land / perfect / miss.
-- An optional **juice intensity** setting for players who want more or less.
-
-_Where:_ new classes in `effects/`, wired from `screens/PlayScreen`, tunables in `config/Tunables`.

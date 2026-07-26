@@ -3,10 +3,12 @@ package com.codeheadsystems.towerstack.util;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import com.codeheadsystems.towerstack.config.Difficulty;
+import com.codeheadsystems.towerstack.config.JuiceLevel;
 
 /**
- * Persisted player options — sound on/off, flat/isometric view, and difficulty — stored
- * locally via libGDX {@link Preferences}, alongside the best score (see {@link ScoreStore}).
+ * Persisted player options — sound on/off, flat/isometric view, difficulty, and how much juice
+ * to serve — stored locally via libGDX {@link Preferences}, alongside the best score (see
+ * {@link ScoreStore}).
  */
 public class Settings {
 
@@ -14,6 +16,7 @@ public class Settings {
     private static final String KEY_SOUND = "soundEnabled";
     private static final String KEY_ISOMETRIC = "isometric";
     private static final String KEY_DIFFICULTY = "difficulty";
+    private static final String KEY_JUICE = "juice";
 
     private final Preferences prefs;
 
@@ -63,5 +66,23 @@ public class Settings {
     /** Advance to the next difficulty (Easy → Normal → Hard → Easy), for a cycling toggle. */
     public void cycleDifficulty() {
         setDifficulty(difficulty().next());
+    }
+
+    public JuiceLevel juice() {
+        try {
+            return JuiceLevel.valueOf(prefs.getString(KEY_JUICE, JuiceLevel.STORE_BOUGHT.name()));
+        } catch (IllegalArgumentException e) {
+            return JuiceLevel.STORE_BOUGHT; // stored value no longer valid — fall back
+        }
+    }
+
+    public void setJuice(JuiceLevel juice) {
+        prefs.putString(KEY_JUICE, juice.name());
+        prefs.flush();
+    }
+
+    /** Advance to the next juice level (None → Store Bought → Freshly Squeezed → None). */
+    public void cycleJuice() {
+        setJuice(juice().next());
     }
 }

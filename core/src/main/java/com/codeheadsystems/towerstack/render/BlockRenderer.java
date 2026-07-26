@@ -1,8 +1,10 @@
 package com.codeheadsystems.towerstack.render;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.codeheadsystems.towerstack.effects.SquashStretch;
+import com.codeheadsystems.towerstack.effects.TowerSway;
 import com.codeheadsystems.towerstack.model.Block;
 import com.codeheadsystems.towerstack.model.Tower;
 
@@ -17,9 +19,18 @@ import com.codeheadsystems.towerstack.model.Tower;
  */
 public interface BlockRenderer {
 
-    void drawTower(ShapeRenderer shapes, Tower tower, SquashStretch squash);
+    /** Draw the stack, leaning each block by its {@link TowerSway} offset (zero when at rest). */
+    void drawTower(ShapeRenderer shapes, Tower tower, SquashStretch squash, TowerSway sway);
 
-    void drawMoving(ShapeRenderer shapes, Block moving);
+    /** Draw the sliding block, nudged by {@code offsetX} so it leans with the tower's crown. */
+    void drawMoving(ShapeRenderer shapes, Block moving, float offsetX);
+
+    /**
+     * Draw a translucent copy of a block — one frame of the sliding block's motion trail. Takes
+     * loose geometry rather than a {@link Block} so the trail can keep its own light samples.
+     */
+    void drawGhost(ShapeRenderer shapes, float left, float bottom, float width, float height,
+                   Color color, float alpha);
 
     /**
      * Map a game-space point (x on the slide axis, y = height) to the render-space world

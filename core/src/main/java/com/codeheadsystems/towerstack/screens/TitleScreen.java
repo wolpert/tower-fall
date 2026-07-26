@@ -18,9 +18,9 @@ import com.codeheadsystems.towerstack.util.Settings;
 
 /**
  * The idle/title screen (build brief §8): game name, a "tap to start" prompt, the best score,
- * and tappable Sound / View / Difficulty toggles. Tapping a toggle flips (or cycles) it; tapping
- * anywhere else (or pressing space) starts a run. On desktop, {@code M} / {@code V} / {@code D}
- * also change sound / view / difficulty.
+ * and tappable Sound / View / Difficulty / Juice toggles. Tapping a toggle flips (or cycles) it;
+ * tapping anywhere else (or pressing space) starts a run. On desktop, {@code M} / {@code V} /
+ * {@code D} / {@code J} also change sound / view / difficulty / juice.
  *
  * <p>Transient — a fresh instance is created each time we return here, so it disposes its own
  * resources in {@link #hide()}.
@@ -46,6 +46,9 @@ public class TitleScreen extends ScreenAdapter {
             Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
     private final Rectangle difficultyToggle = new Rectangle(
             Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.105f,
+            Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
+    private final Rectangle juiceToggle = new Rectangle(
+            Tunables.WORLD_WIDTH * 0.15f, Tunables.WORLD_HEIGHT * 0.035f,
             Tunables.WORLD_WIDTH * 0.70f, Tunables.WORLD_HEIGHT * 0.060f);
 
     public TitleScreen(TowerStackGame game) {
@@ -84,6 +87,9 @@ public class TitleScreen extends ScreenAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
             settings.cycleDifficulty();
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            settings.cycleJuice();
+        }
         if (Gdx.input.justTouched()) {
             Vector2 world = text.unproject(Gdx.input.getX(), Gdx.input.getY());
             if (soundToggle.contains(world.x, world.y)) {
@@ -96,6 +102,10 @@ public class TitleScreen extends ScreenAdapter {
             }
             if (difficultyToggle.contains(world.x, world.y)) {
                 settings.cycleDifficulty();
+                return false;
+            }
+            if (juiceToggle.contains(world.x, world.y)) {
+                settings.cycleJuice();
                 return false;
             }
             startGame();
@@ -130,6 +140,8 @@ public class TitleScreen extends ScreenAdapter {
                 Tunables.WORLD_HEIGHT * 0.20f, Color.LIGHT_GRAY, 1.1f);
         text.drawCentered("Difficulty:  " + settings.difficulty().getLabel(),
                 Tunables.WORLD_HEIGHT * 0.13f, Color.LIGHT_GRAY, 1.1f);
+        text.drawCentered("Juice:  " + settings.juice().getLabel(),
+                Tunables.WORLD_HEIGHT * 0.06f, Color.LIGHT_GRAY, 1.1f);
         text.end();
 
         fade.render();

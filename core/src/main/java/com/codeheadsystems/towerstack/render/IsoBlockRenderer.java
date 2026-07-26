@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.codeheadsystems.towerstack.config.Tunables;
 import com.codeheadsystems.towerstack.effects.SquashStretch;
+import com.codeheadsystems.towerstack.effects.TowerSway;
 import com.codeheadsystems.towerstack.model.Block;
 import com.codeheadsystems.towerstack.model.Tower;
 import java.util.List;
@@ -24,21 +25,33 @@ public class IsoBlockRenderer implements BlockRenderer {
     private final Color shade = new Color();
 
     @Override
-    public void drawTower(ShapeRenderer shapes, Tower tower, SquashStretch squash) {
+    public void drawTower(ShapeRenderer shapes, Tower tower, SquashStretch squash, TowerSway sway) {
         List<Block> blocks = tower.blocks();
+        int topIndex = blocks.size() - 1;
         for (int i = 0; i < blocks.size(); i++) {
             Block block = blocks.get(i);
-            if (i == blocks.size() - 1) {
-                drawBlock(shapes, block, squash.scaleX(), squash.scaleY());
+            float offsetX = sway.offsetAt(i, topIndex);
+            if (i == topIndex) {
+                drawBlock(shapes, block.centerX() + offsetX, block.getBottom(),
+                        block.getWidth() * squash.scaleX(), block.getHeight() * squash.scaleY(),
+                        block.getColor(), 1f);
             } else {
-                drawBlock(shapes, block, 1f, 1f);
+                drawBlock(shapes, block.centerX() + offsetX, block.getBottom(),
+                        block.getWidth(), block.getHeight(), block.getColor(), 1f);
             }
         }
     }
 
     @Override
-    public void drawMoving(ShapeRenderer shapes, Block moving) {
-        drawBlock(shapes, moving, 1f, 1f);
+    public void drawMoving(ShapeRenderer shapes, Block moving, float offsetX) {
+        drawBlock(shapes, moving.centerX() + offsetX, moving.getBottom(),
+                moving.getWidth(), moving.getHeight(), moving.getColor(), 1f);
+    }
+
+    @Override
+    public void drawGhost(ShapeRenderer shapes, float left, float bottom, float width, float height,
+                          Color color, float alpha) {
+        drawBlock(shapes, left + width / 2f, bottom, width, height, color, alpha);
     }
 
     @Override
@@ -47,13 +60,11 @@ public class IsoBlockRenderer implements BlockRenderer {
         return out.set(projectX(gameX, z), projectY(gameX, z, gameY));
     }
 
-    private void drawBlock(ShapeRenderer shapes, Block block, float scaleX, float scaleY) {
-        float width = block.getWidth() * scaleX;
-        float height = block.getHeight() * scaleY;
-        float centerX = block.centerX();
+    private void drawBlock(ShapeRenderer shapes, float centerX, float bottom,
+                           float width, float height, Color base, float alpha) {
         float left = centerX - width / 2f;
         float right = centerX + width / 2f;
-        float top = block.getBottom() + height;
+        float top = bottom + height;
         float depth = Tunables.ISO_DEPTH;
 
         // Top-face corners, projected. The two side faces are these edges dropped by `height`
@@ -67,18 +78,16 @@ public class IsoBlockRenderer implements BlockRenderer {
         float dx = projectX(left, depth);
         float dy = projectY(left, depth, top);
 
-        Color base = block.getColor();
-
         // Front face (depth side): top edge d->c, dropped by height.
-        shapes.setColor(shaded(base, Tunables.ISO_SHADE_FRONT));
+        shapes.setColor(shaded(base, Tunables.ISO_SHADE_FRONT, alpha));
         fillQuad(shapes, dx, dy, cx, cy, cx, cy - height, dx, dy - height);
 
         // Right face (right edge): top edge b->c, dropped by height.
-        shapes.setColor(shaded(base, Tunables.ISO_SHADE_SIDE));
+        shapes.setColor(shaded(base, Tunables.ISO_SHADE_SIDE, alpha));
         fillQuad(shapes, bx, by, cx, cy, cx, cy - height, bx, by - height);
 
         // Top face last, so its edges sit cleanly over the sides.
-        shapes.setColor(shaded(base, Tunables.ISO_SHADE_TOP));
+        shapes.setColor(shaded(base, Tunables.ISO_SHADE_TOP, alpha));
         fillQuad(shapes, ax, ay, bx, by, cx, cy, dx, dy);
     }
 
@@ -92,8 +101,8 @@ public class IsoBlockRenderer implements BlockRenderer {
         return gameY + (centered + depth) * Tunables.ISO_SCALE_Y;
     }
 
-    private Color shaded(Color base, float factor) {
-        return shade.set(base.r * factor, base.g * factor, base.b * factor, 1f);
+    private Color shaded(Color base, float factor, float alpha) {
+        return shade.set(base.r * factor, base.g * factor, base.b * factor, alpha);
     }
 
     private void fillQuad(ShapeRenderer shapes,
