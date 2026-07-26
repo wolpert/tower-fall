@@ -14,6 +14,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+version = towerStackVersion
+
 application {
     mainClass = 'com.codeheadsystems.towerstack.lwjgl3.Lwjgl3Launcher'
 }
@@ -44,7 +46,11 @@ tasks.register('dist', Jar) {
 
     archiveFileName = "${distributionName}.jar"
     destinationDirectory = layout.buildDirectory.dir('dist')
-    manifest.attributes 'Main-Class': application.mainClass.get()
+    manifest.attributes(
+            'Main-Class': application.mainClass.get(),
+            // So a downloaded jar can say which build it is, even out of context.
+            'Implementation-Title': 'Tower Stack',
+            'Implementation-Version': project.version)
 
     from sourceSets.main.output
     from({ configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }) {
